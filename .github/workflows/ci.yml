@@ -1,0 +1,49 @@
+name: CI Windows x64
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test-and-build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Instalar dependências
+        run: pip install -e .[dev]
+      - name: Testes
+        run: pytest -q
+      - name: Qualidade
+        run: |
+          ruff check src tests
+          ruff format --check src tests
+          mypy src
+      - name: Build Windows x64
+        shell: pwsh
+        run: .\scripts\build.ps1
+      - name: Publicar artefato
+        uses: actions/upload-artifact@v4
+        with:
+          name: TranscritorLocal-win64
+          path: dist/TranscritorLocal
+
+  landing-build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: landing
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: landing/package-lock.json
+      - name: Instalar dependências da landing
+        run: npm ci
+      - name: Build da landing
+        run: npm run build

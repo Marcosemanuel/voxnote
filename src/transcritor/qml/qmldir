@@ -1,0 +1,5 @@
+singleton Theme 1.0 Theme.qml
+VxButton 1.0 components/VxButton.qml
+VxField 1.0 components/VxField.qml
+VxComboBox 1.0 components/VxComboBox.qml
+NavItem 1.0 components/NavItem.qml

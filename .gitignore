@@ -1,0 +1,71 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+coverage.xml
+.coverage
+htmlcov/
+
+# Builds
+build/
+dist/
+node_modules/
+*.spec
+!TranscritorLocal.spec
+installer/output/
+*.log
+
+# Local application data
+*.db
+*.db-shm
+*.db-wal
+logs/
+cache/
+models/
+
+# Audio and large model artifacts
+*.pt
+*.bin
+*.onnx
+*.ggml
+*.gguf
+*.mp3
+*.wav
+*.m4a
+*.aac
+*.flac
+*.ogg
+*.opus
+*.wma
+*.aiff
+*.aif
+*.webm
+
+# IDE and OS
+.idea/
+.vscode/
+Thumbs.db
+Desktop.ini
+
+# Local Codex/QA captures
+.codex-audit/
+.codex-qml-data/
+.codex-*.log
+design-qa*.png
+qml-grab-*.png
+qml-reference-*.png
+qml-new-*.png
+voxnote-*-qa.png
+voxnote-*-final.png
+voxnote-all-pages-new.png
+voxnote-brand-comparison.png
+voxnote-history-current.png
+
+# Secrets
+.env
+.env.*
+!.env.example
