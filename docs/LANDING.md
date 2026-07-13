@@ -34,9 +34,9 @@ Não é uma aplicação de transcrição, não recebe arquivos de áudio e não 
 - Benefícios: áudios longos, processamento local e revisão/exportação em formatos usuais.
 - CTA: download explícito para Windows 10 e 11 (64 bits), sem prometer recurso não disponível.
 
-O botão usa `VITE_DOWNLOAD_URL`. O valor de produção deve apontar diretamente para o arquivo `.exe` publicado em GitHub Releases. Se a variável não existir, o botão fica desabilitado para não prometer um download inexistente.
+O botão usa `VITE_DOWNLOAD_URL`. O valor de produção deve apontar diretamente para o ativo permanente `Voxnote-Setup-win64.exe` em `releases/latest/download`; ele não deve conter o número da versão. Se a variável não existir, o mesmo endereço permanente incorporado na landing é usado.
 
-Na Vercel, importe o repositório, defina `landing` como Root Directory e configure `VITE_DOWNLOAD_URL` no ambiente Production. A hospedagem serve somente a página estática; o instalador continua no GitHub Releases.
+Na Vercel, importe o repositório, defina `landing` como Root Directory e configure `VITE_DOWNLOAD_URL` com o endereço permanente no ambiente Production. A hospedagem serve somente a página estática; o instalador continua no GitHub Releases.
 
 Deploy atual: https://voxnote-alpha.vercel.app/
 

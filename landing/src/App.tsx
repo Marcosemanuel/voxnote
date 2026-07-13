@@ -28,7 +28,7 @@ const steps = [
 ];
 
 const releaseDownloadUrl =
-  "https://github.com/Marcosemanuel/voxnote/releases/latest/download/TranscritorLocal-Setup-0.1.1-win64.exe";
+  "https://github.com/Marcosemanuel/voxnote/releases/latest/download/Voxnote-Setup-win64.exe";
 const downloadUrl = (import.meta.env.VITE_DOWNLOAD_URL as string | undefined) || releaseDownloadUrl;
 
 function Brand() {

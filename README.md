@@ -49,7 +49,7 @@ npm run dev
 npm run build
 ```
 
-A landing aponta por padrão para a Release pública atual do Voxnote. Defina `VITE_DOWNLOAD_URL` em `landing/.env` somente para substituir o link em outro ambiente. A landing não recebe áudio nem acessa o microfone.
+A landing aponta por padrão para o ativo permanente da Release pública mais recente: `https://github.com/Marcosemanuel/voxnote/releases/latest/download/Voxnote-Setup-win64.exe`. Defina `VITE_DOWNLOAD_URL` em `landing/.env` somente para substituir o link em outro ambiente. A landing não recebe áudio nem acessa o microfone.
 
 ## Instalador
 
@@ -59,6 +59,8 @@ A landing aponta por padrão para a Release pública atual do Voxnote. Defina `V
 ```
 
 O instalador gerado fica em `installer/output/` e não deve ser commitado.
+
+Para publicar uma Release, use `./scripts/publish-release.ps1 -Version <versão>` depois de gerar o instalador. Ele publica também o ativo permanente consumido pela landing.
 
 ## Documentação obrigatória
 

@@ -49,6 +49,7 @@ O formato segue categorias `Adicionado`, `Alterado`, `Corrigido`, `Removido` e `
 
 ### Corrigido
 
+- Link de download da landing estabilizado: agora usa o ativo permanente `Voxnote-Setup-win64.exe` da Release mais recente, sem depender do número da versão.
 - Landing publicada em produção na Vercel com domínio padrão `voxnote-alpha.vercel.app`.
 
 - Botões QML passaram a definir explicitamente as cores de texto e de fundo para os estados normal, hover e pressionado, sem depender da paleta nativa do Windows.
