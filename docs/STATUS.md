@@ -42,6 +42,7 @@ acompanhar progresso, preservar checkpoints, revisar segmentos e exportar TXT, S
 - Manrope incorporada ao pacote, com tokens tipográficos aplicados a telas, formulários, tabelas, transcrições e timestamps.
 - Identidade Voxnote aplicada: símbolo na navegação, paleta oficial, ícone do executável e nome da marca no aplicativo e instalador.
 - Ícone Voxnote atualizado com o ativo oficial final fornecido pelo proprietário.
+- Ícone Windows regenerado a partir do ativo oficial, com transparência e frames de 16, 20, 24, 32, 40, 48, 64, 128 e 256 px.
 - Padrão estético Voxnote aplicado às telas principais, com SVGs Lucide e superfícies elevadas consistentes.
 - Conjunto vetorial Lucide aplicado à navegação, upload, busca e itens de histórico; mantém traço consistente de 2px e azul apenas nos destaques.
 - Padrão das telas de nova transcrição, histórico e modelos consolidado: formulário sem cartão redundante, tabelas elevadas, progresso visual e ações coerentes.
@@ -94,7 +95,7 @@ CPU comum e GPUs NVIDIA diferentes.
 - Executável empacotado: iniciado e permaneceu ativo no smoke test.
 - Pacote `onedir`: gerado em 2026-07-13 após as correções pós-revisão.
 - Instalador: 182,6 MB.
-- SHA-256: `3F512B5138040B31C83715D02ED14DE9C40C9E63B6C6215655CA5F150CAC9AD0`.
+- SHA-256: `FBB54571A1D0A56F8A96E8DF3A79FB66151432ABB9574602896E7AC8505CD815`.
 - Instalação silenciosa: código 0.
 - Inicialização após instalação: aprovada.
 - Desinstalação silenciosa: código 0 e pasta do programa removida.

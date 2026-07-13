@@ -9,6 +9,7 @@
 - Removidos diálogos QWidget do fluxo padrão QML.
 - Adicionada validação QML por lint ao build.
 - Landing passou a apontar para o instalador publicado no GitHub Releases.
+- Ícone oficial do Windows passou a incluir frames de 16 a 256 px com transparência.
 
 Todas as mudanças visíveis ao usuário serão registradas aqui.
 
