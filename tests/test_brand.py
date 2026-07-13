@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from PySide6.QtGui import QPixmap
 
 from transcritor.app import bundled_path
@@ -23,6 +25,12 @@ def test_voxnote_windows_icon_contains_standard_multiresolution_frames() -> None
         sizes.append((width, height))
 
     assert sizes == [(16, 16), (20, 20), (24, 24), (32, 32), (40, 40), (48, 48), (64, 64), (128, 128), (256, 256)]
+
+
+def test_installer_uses_the_official_icon_for_program_and_desktop_shortcuts() -> None:
+    installer = Path("installer/TranscritorLocal.iss").read_text(encoding="utf-8")
+    icon_reference = 'IconFilename: "{app}\\assets\\branding\\voxnote-app-icon.ico"; IconIndex: 0'
+    assert installer.count(icon_reference) == 2
 
 
 def test_voxnote_palette_is_applied_to_the_interface() -> None:

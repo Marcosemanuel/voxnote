@@ -45,6 +45,7 @@ acompanhar progresso, preservar checkpoints, revisar segmentos e exportar TXT, S
 - Ícone Windows regenerado a partir do ativo oficial, com transparência e frames de 16, 20, 24, 32, 40, 48, 64, 128 e 256 px.
 - Aviso de atualização disponível: consulta em segundo plano a release pública do GitHub e direciona manualmente para a página da versão, sem baixar ou instalar nada.
 - Link público da landing estabilizado em `releases/latest/download/Voxnote-Setup-win64.exe`; a versão `0.1.1` foi publicada com esse ativo e a URL responde com o instalador.
+- Atalho existente `Voxnote.lnk` atualizado para o `.ico` oficial instalado; novas instalações e atualizações usarão a mesma referência explícita.
 - Padrão estético Voxnote aplicado às telas principais, com SVGs Lucide e superfícies elevadas consistentes.
 - Conjunto vetorial Lucide aplicado à navegação, upload, busca e itens de histórico; mantém traço consistente de 2px e azul apenas nos destaques.
 - Padrão das telas de nova transcrição, histórico e modelos consolidado: formulário sem cartão redundante, tabelas elevadas, progresso visual e ações coerentes.
