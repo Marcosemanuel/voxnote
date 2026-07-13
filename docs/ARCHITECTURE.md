@@ -211,7 +211,7 @@ Perfis de UI não devem expor detalhes internos:
 
 - Build Windows x64 nativo.
 - PyInstaller `onedir`; não migrar para `onefile` sem benchmark e ADR.
-- Inno Setup por usuário em `%LOCALAPPDATA%`.
+- Inno Setup por usuário em `%LOCALAPPDATA%`. Em cada versão, o instalador grava uma cópia versionada do ícone oficial e aponta os atalhos Voxnote para ela; isso evita que o cache do Windows mantenha um ícone anterior após uma atualização.
 - Instalador valida Windows e arquitetura.
 - Dados e modelos sobrevivem a atualização.
 - Dependências são fixadas e suas licenças registradas.

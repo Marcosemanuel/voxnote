@@ -47,6 +47,7 @@ Nenhuma funcionalidade está pronta apenas porque foi implementada. Deve existir
 - GPU compatível.
 - GPU incompatível com fallback.
 - Atualização preservando dados.
+- Atualização regravando um atalho Voxnote existente com o ícone oficial da nova versão.
 - Desinstalação preservando dados.
 
 ## 3. Matriz mínima de máquinas

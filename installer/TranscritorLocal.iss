@@ -27,10 +27,11 @@ Name: "brazilianportuguese"; MessagesFile: "compiler:Languages\BrazilianPortugue
 
 [Files]
 Source: "..\dist\TranscritorLocal\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "..\assets\branding\voxnote-app-icon.ico"; DestDir: "{app}\assets\branding"; DestName: "voxnote-app-icon-{#MyAppVersion}.ico"; Flags: ignoreversion
 
 [Icons]
-Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\assets\branding\voxnote-app-icon.ico"; IconIndex: 0
-Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\assets\branding\voxnote-app-icon.ico"; IconIndex: 0; Tasks: desktopicon
+Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\assets\branding\voxnote-app-icon-{#MyAppVersion}.ico"; IconIndex: 0
+Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\assets\branding\voxnote-app-icon-{#MyAppVersion}.ico"; IconIndex: 0; Tasks: desktopicon
 
 [Tasks]
 Name: "desktopicon"; Description: "Criar atalho na área de trabalho"; GroupDescription: "Atalhos:"
@@ -44,4 +45,26 @@ begin
   Result := IsWin64;
   if not Result then
     MsgBox('Este aplicativo requer Windows 10/11 de 64 bits.', mbError, MB_OK);
+end;
+
+procedure RefreshDesktopShortcutIcon();
+var
+  shortcutPath: String;
+  appPath: String;
+  iconPath: String;
+begin
+  shortcutPath := ExpandConstant('{autodesktop}\{#MyAppName}.lnk');
+  if not FileExists(shortcutPath) then
+    Exit;
+
+  appPath := ExpandConstant('{app}\{#MyAppExeName}');
+  iconPath := ExpandConstant('{app}\assets\branding\voxnote-app-icon-{#MyAppVersion}.ico');
+  DeleteFile(shortcutPath);
+  CreateShellLink(shortcutPath, '{#MyAppName}', appPath, '', ExpandConstant('{app}'), iconPath, 0, SW_SHOWNORMAL);
+end;
+
+procedure CurStepChanged(CurStep: TSetupStep);
+begin
+  if CurStep = ssPostInstall then
+    RefreshDesktopShortcutIcon();
 end;

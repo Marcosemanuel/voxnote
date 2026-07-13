@@ -49,6 +49,7 @@ O formato segue categorias `Adicionado`, `Alterado`, `Corrigido`, `Removido` e `
 
 ### Corrigido
 
+- Atualizações do Voxnote agora renovam o ícone do atalho existente da área de trabalho usando uma cópia versionada do ativo oficial.
 - Atalho do Voxnote na área de trabalho passou a referenciar explicitamente o ícone oficial em todas as novas instalações e atualizações.
 - Link de download da landing estabilizado: agora usa o ativo permanente `Voxnote-Setup-win64.exe` da Release mais recente, sem depender do número da versão.
 - Landing publicada em produção na Vercel com domínio padrão `voxnote-alpha.vercel.app`.
