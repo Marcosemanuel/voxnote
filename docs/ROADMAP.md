@@ -98,6 +98,7 @@ Estado: concluída localmente
 - Inno Setup x64.
 - GitHub Actions Windows.
 - GitHub Release e checksum.
+- Aviso de versão disponível pelo GitHub Releases, sem download automático.
 - Licenças de terceiros.
 - Testes em VM limpa.
 

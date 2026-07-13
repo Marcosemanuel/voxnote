@@ -56,3 +56,15 @@ def test_qml_controller_closes_after_cancelled_worker(qtbot, monkeypatch, tmp_pa
     with qtbot.waitSignal(controller.closeRequested, timeout=1000):
         controller._worker_finished()
     assert controller._controller.cancel_event.is_set()
+
+
+def test_qml_controller_exposes_newer_release(monkeypatch, tmp_path: Path) -> None:
+    monkeypatch.setattr("transcritor.qml_controller.detect_hardware", hardware_fixture)
+    paths = AppPaths.resolve(tmp_path / "app")
+    controller = QmlController(paths, Database(paths.data / "test.db"))
+
+    controller._set_update_available("0.1.1", "https://github.com/Marcosemanuel/voxnote/releases/tag/v0.1.1")
+
+    assert controller.updateAvailable is True
+    assert controller.updateVersion == "0.1.1"
+    assert controller.updateUrl.endswith("v0.1.1")

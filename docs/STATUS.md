@@ -43,6 +43,7 @@ acompanhar progresso, preservar checkpoints, revisar segmentos e exportar TXT, S
 - Identidade Voxnote aplicada: símbolo na navegação, paleta oficial, ícone do executável e nome da marca no aplicativo e instalador.
 - Ícone Voxnote atualizado com o ativo oficial final fornecido pelo proprietário.
 - Ícone Windows regenerado a partir do ativo oficial, com transparência e frames de 16, 20, 24, 32, 40, 48, 64, 128 e 256 px.
+- Aviso de atualização disponível: consulta em segundo plano a release pública do GitHub e direciona manualmente para a página da versão, sem baixar ou instalar nada.
 - Padrão estético Voxnote aplicado às telas principais, com SVGs Lucide e superfícies elevadas consistentes.
 - Conjunto vetorial Lucide aplicado à navegação, upload, busca e itens de histórico; mantém traço consistente de 2px e azul apenas nos destaques.
 - Padrão das telas de nova transcrição, histórico e modelos consolidado: formulário sem cartão redundante, tabelas elevadas, progresso visual e ações coerentes.
@@ -88,14 +89,14 @@ CPU comum e GPUs NVIDIA diferentes.
 
 ## Evidências da versão 0.1.0
 
-- `pytest`: 28 testes aprovados.
+- `pytest`: 32 testes aprovados.
 - `ruff check`: aprovado.
 - `ruff format --check`: aprovado.
 - `mypy`: aprovado.
 - Executável empacotado: iniciado e permaneceu ativo no smoke test.
 - Pacote `onedir`: gerado em 2026-07-13 após as correções pós-revisão.
 - Instalador: 182,6 MB.
-- SHA-256: `FBB54571A1D0A56F8A96E8DF3A79FB66151432ABB9574602896E7AC8505CD815`.
+- SHA-256: `351A9F36647F622E0D86C6F2B6C9831462997BE77CA728056CB07DD2B91BC065`.
 - Instalação silenciosa: código 0.
 - Inicialização após instalação: aprovada.
 - Desinstalação silenciosa: código 0 e pasta do programa removida.

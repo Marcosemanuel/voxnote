@@ -25,6 +25,8 @@ ApplicationWindow {
     property bool closeApproved: false
     property int exportJobId: 0
 
+    Component.onCompleted: backend.start_update_check()
+
     onClosing: function (close) {
         if (closeApproved) {
             close.accepted = true;
@@ -183,6 +185,68 @@ ApplicationWindow {
         function onCloseRequested() {
             root.closeApproved = true;
             root.close();
+        }
+    }
+
+    Rectangle {
+        id: updateBanner
+        visible: backend.updateAvailable
+        z: 100
+        width: Math.min(440, root.width - 40)
+        height: updateContent.implicitHeight + 32
+        anchors.top: parent.top
+        anchors.right: parent.right
+        anchors.topMargin: 20
+        anchors.rightMargin: 20
+        radius: Theme.radius
+        color: Theme.surface
+        border.width: 1
+        border.color: "#A8C7FA"
+
+        RowLayout {
+            id: updateContent
+            anchors.fill: parent
+            anchors.margins: 16
+            spacing: 14
+            Rectangle {
+                Layout.preferredWidth: 36
+                Layout.preferredHeight: 36
+                radius: 18
+                color: Theme.primarySoft
+                Text {
+                    anchors.centerIn: parent
+                    text: "↑"
+                    color: Theme.primaryDark
+                    font.family: "Manrope"
+                    font.pixelSize: 20
+                    font.weight: Font.Bold
+                }
+            }
+            ColumnLayout {
+                Layout.fillWidth: true
+                spacing: 2
+                Text {
+                    text: "Atualização disponível"
+                    color: Theme.ink
+                    font.family: "Manrope"
+                    font.pixelSize: 14
+                    font.weight: Font.DemiBold
+                }
+                Text {
+                    text: "Versão " + backend.updateVersion + " pronta para baixar."
+                    color: Theme.text
+                    font.family: "Manrope"
+                    font.pixelSize: 12
+                    wrapMode: Text.Wrap
+                    Layout.fillWidth: true
+                }
+            }
+            VxButton {
+                text: "Ver atualização"
+                primary: true
+                Layout.preferredWidth: 144
+                onClicked: Qt.openUrlExternally(backend.updateUrl)
+            }
         }
     }
 

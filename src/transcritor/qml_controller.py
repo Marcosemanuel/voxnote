@@ -14,6 +14,7 @@ from transcritor.hardware import detect_hardware
 from transcritor.models import ModelManager
 from transcritor.paths import AppPaths
 from transcritor.resources import bundled_path
+from transcritor.updates import UpdateCheckWorker
 from transcritor.workers import ExportWorker, ModelDownloadWorker, TranscriptionWorker
 
 LOG = logging.getLogger(__name__)
@@ -34,6 +35,7 @@ class QmlController(QObject):
     exportActiveChanged = Signal()
     noticeRequested = Signal(str, str, str)
     confirmationRequested = Signal(str, str, str)
+    updateChanged = Signal()
 
     def __init__(self, paths: AppPaths, database: Database) -> None:
         super().__init__()
@@ -64,6 +66,11 @@ class QmlController(QObject):
         self._export_thread: QThread | None = None
         self._export_worker: ExportWorker | None = None
         self._pending_confirmation: tuple[str, int | str | None] | None = None
+        self._update_thread: QThread | None = None
+        self._update_worker: UpdateCheckWorker | None = None
+        self._update_available = False
+        self._update_version = ""
+        self._update_url = ""
         self.refresh_jobs()
         self.refresh_models()
 
@@ -136,6 +143,18 @@ class QmlController(QObject):
     def exportActive(self) -> bool:
         return self._export_thread is not None and self._export_thread.isRunning()
 
+    @Property(bool, notify=updateChanged)
+    def updateAvailable(self) -> bool:
+        return self._update_available
+
+    @Property(str, notify=updateChanged)
+    def updateVersion(self) -> str:
+        return self._update_version
+
+    @Property(str, notify=updateChanged)
+    def updateUrl(self) -> str:
+        return self._update_url
+
     @Property(str, constant=True)
     def assetRoot(self) -> str:
         return QUrl.fromLocalFile(str(bundled_path("assets"))).toString()
@@ -179,6 +198,27 @@ class QmlController(QObject):
     @Property(str, constant=True)
     def acceleration(self) -> str:
         return self.hardware.gpu_name or "Processamento por CPU"
+
+    @Slot()
+    def start_update_check(self) -> None:
+        if self._update_thread is not None:
+            return
+        self._update_thread = QThread(self)
+        self._update_worker = UpdateCheckWorker()
+        self._update_worker.moveToThread(self._update_thread)
+        self._update_thread.started.connect(self._update_worker.run)
+        self._update_worker.update_available.connect(self._set_update_available)
+        self._update_worker.finished.connect(self._update_thread.quit)
+        self._update_thread.finished.connect(self._update_worker.deleteLater)
+        self._update_thread.finished.connect(self._update_thread.deleteLater)
+        self._update_thread.start()
+
+    @Slot(str, str)
+    def _set_update_available(self, version: str, url: str) -> None:
+        self._update_available = True
+        self._update_version = version
+        self._update_url = url
+        self.updateChanged.emit()
 
     @Slot(int)
     def navigate(self, page: int) -> None:

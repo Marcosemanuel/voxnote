@@ -55,6 +55,8 @@
 - `FR-050` Registrar versão, hardware, backend, modelo, parâmetros, duração, tempo e erros.
 - `FR-051` Gerar pacote de diagnóstico sem texto integral por padrão.
 - `FR-052` Mostrar mensagens que expliquem problema, estado do progresso e próxima ação.
+- `FR-053` Consultar, em segundo plano na abertura, a última release pública do Voxnote no GitHub.
+- `FR-054` Exibir aviso somente quando a versão publicada for superior à instalada e abrir a página da release no navegador quando o usuário solicitar.
 
 ## 2. Requisitos não funcionais
 
@@ -82,6 +84,7 @@
 - `NFR-012` Manter uso de CPU configurável e não usar prioridade alta.
 - `NFR-013` Modelos não podem ser versionados no Git.
 - `NFR-014` Builds reproduzíveis devem usar dependências fixadas.
+- `NFR-015` Falha, indisponibilidade ou timeout da consulta de atualização não pode atrasar a interface nem gerar erro visível ao usuário.
 
 ## 3. Critérios de aceite do MVP
 

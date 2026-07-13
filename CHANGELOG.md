@@ -19,6 +19,7 @@ O formato segue categorias `Adicionado`, `Alterado`, `Corrigido`, `Removido` e `
 
 ### Adicionado
 
+- Aviso de atualização disponível, consultado em segundo plano no GitHub Releases e com abertura manual da página da release.
 - Landing pública Voxnote pronta para Vercel, com página de download, cena de gravação em Three.js e adaptação específica para mobile.
 - Conjunto de ícones SVG Lucide para áudio, documento, notas, destaque, microfone, menu e busca.
 - Identidade visual Voxnote: símbolo, ícone do aplicativo, paleta de marca e nome exibido no aplicativo e instalador.

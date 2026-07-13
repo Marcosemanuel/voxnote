@@ -200,7 +200,7 @@ Perfis de UI não devem expor detalhes internos:
 ## 10. Segurança e privacidade
 
 - Processamento local.
-- Rede apenas para modelos, versões e links explicitamente acionados.
+- Rede apenas para modelos, links explicitamente acionados e metadados da última release pública do GitHub. A consulta de versão ocorre em segundo plano, sem autenticação, sem enviar dados do usuário ou áudio e com timeout curto.
 - Downloads devem usar HTTPS, arquivo temporário, retomada e hash.
 - Logs não incluem texto integral por padrão.
 - Pacote de diagnóstico deve remover dados pessoais.

@@ -55,6 +55,7 @@ Pessoa que precisa transcrever entrevistas, reuniões, aulas, gravações profis
 - Texto original e revisado separados.
 - Exportações TXT, SRT, VTT e JSON.
 - Instalador e releases no GitHub.
+- Aviso de nova versão com atualização manual.
 
 ## 7. Fora do MVP
 
@@ -65,7 +66,7 @@ Pessoa que precisa transcrever entrevistas, reuniões, aulas, gravações profis
 - Nuvem ou contas de usuário.
 - LLM para reescrever automaticamente a transcrição.
 - DOCX e PDF.
-- Autoatualização silenciosa.
+- Download ou instalação automática de atualizações.
 - Processamento paralelo de múltiplos áudios.
 
 ## 8. Métricas do produto
