@@ -4,7 +4,7 @@
 
 ## Resumo
 
-A versão funcional `0.1.1` foi implementada e empacotada para Windows x64. O fluxo disponível é
+A versão `0.2.0` está em preparação para Windows x64. Ela inclui a captura local recuperável de reuniões; a publicação do instalador e a validação prolongada de dispositivos ainda estão pendentes. O fluxo disponível é
 selecionar e validar áudios, configurar idioma/qualidade/glossário, transcrever localmente,
 acompanhar progresso, preservar checkpoints, revisar segmentos e exportar TXT, SRT, VTT ou JSON.
 
@@ -64,6 +64,18 @@ Landing publicada em produção na Vercel: https://voxnote-alpha.vercel.app/ (HT
 
 ## Em andamento
 
+- Captura local de reuniões aprovada para pós-MVP: requisitos `FR-060` a `FR-067`, critérios `AC-016` a `AC-020` e ADR-017 registrados.
+- Stack técnica, armazenamento, IPC, pipeline, frontend, estados, componentes e gates da Fase 9 definidos em `docs/MEETING_CAPTURE_STACK_FRONTEND.md`.
+- Captura local de reuniões implementada como primeira entrega funcional: PyAudioWPatch/WASAPI grava a saída do Windows e o microfone opcional em blocos WAV separados, com journal fsync, SQLite e recuperação no próximo início.
+- Fluxo QML de Capturar reunião implementado: confirmação de autorização, dispositivos, teste de sinal, captura, finalização, transcrição final, revisão e exportação.
+- Aba de gravações de reuniões padronizada com os componentes reutilizáveis Voxnote para seleção, consentimento, medidores, edição, estados e ações.
+- Smoke test real em 2026-07-13: loopback padrão WASAPI abriu, gravou um WAV estéreo de 48 kHz com 54.272 frames e emitiu `block_committed`; nenhum `fatal_error` ocorreu.
+- Build PyInstaller `onedir` e instalador Inno Setup `0.2.0` concluídos com PyAudioWPatch; instalação local criou o atalho `Voxnote.lnk` apontando para o ícone oficial versionado. Prova de 60 minutos e matriz de dispositivos permanecem pendentes.
+- Sessões de reunião com blocos persistidos podem ser transcritas ou reprocessadas pelo histórico; recuperação inclui estado `failed` e cria nova execução sem sobrescrever revisão anterior.
+- Fluxo QML de captura teve textos UTF-8 e rótulos de perfis corrigidos; `Alta precisão` e `Rápida` agora correspondem ao perfil recomendado do backend.
+- Timestamps de trilhas usam QPC comum e há monitor de variação por bloco com alerta acima de 250 ms. A medição em chamada longa e dispositivos reais ainda não foi concluída.
+- Verificação pós-correção em 2026-07-13: 39 testes, Ruff, mypy e lint QML aprovados; PyInstaller `onedir` foi reconstruído e `TranscritorLocal.exe` permaneceu responsivo no smoke test.
+
 - Verificação visual concluída para o menu aberto de idioma/qualidade: os itens mantêm contraste legível em superfície clara, sem herdar o tema escuro nativo do Windows.
 - Seletores de idioma e qualidade usam itens QML próprios com cores explícitas; não há mais dependência do `ItemDelegate` nativo do Windows.
 - Fallback CUDA cobre criação do modelo e inferência; falhas durante a transcrição retomam em CPU usando os checkpoints já persistidos.
@@ -78,8 +90,7 @@ Landing publicada em produção na Vercel: https://voxnote-alpha.vercel.app/ (HT
 
 ## Próximo passo aprovado
 
-Executar a matriz de validação do MVP com os dez formatos, áudio longo e máquinas dos perfis mínimo,
-CPU comum e GPUs NVIDIA diferentes.
+Executar captura de 60 minutos em saída USB/Bluetooth e microfone, medir blocos perdidos, RAM, drift e recuperação. Depois, gerar e instalar o pacote Windows contendo PyAudioWPatch. Em paralelo, permanece pendente a matriz do MVP com os dez formatos, áudio longo e perfis de hardware.
 
 ## Ainda não comprovado
 
@@ -91,9 +102,9 @@ CPU comum e GPUs NVIDIA diferentes.
 - Métricas de precisão.
 - Instalador em VM limpa; o teste local isolado passou.
 
-## Evidências da versão 0.1.1
+## Evidências locais da versão 0.2.0
 
-- `pytest`: 32 testes aprovados.
+- `pytest`: 39 testes aprovados.
 - `ruff check`: aprovado.
 - `ruff format --check`: aprovado.
 - `mypy`: aprovado.
@@ -113,6 +124,8 @@ CPU comum e GPUs NVIDIA diferentes.
 - `RISK-004` Cortes de VAD removerem fala baixa.
 - `RISK-005` Antivírus/SmartScreen sinalizarem executável não assinado.
 - `RISK-006` Métricas do Whisper serem interpretadas incorretamente como confiança absoluta.
+- `RISK-007` Loopback da saída do Windows capturar sons de outros aplicativos durante uma reunião.
+- `RISK-008` Troca, remoção ou latência de dispositivos Bluetooth afetar sincronização de captura.
 
 ## Regra de atualização
 

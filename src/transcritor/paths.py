@@ -12,6 +12,7 @@ class AppPaths:
     models: Path
     logs: Path
     cache: Path
+    captures: Path
     exports: Path
 
     @classmethod
@@ -23,8 +24,9 @@ class AppPaths:
             models=root / "models",
             logs=root / "logs",
             cache=root / "cache",
+            captures=root / "captures",
             exports=Path.home() / "Documents" / "Transcrições",
         )
-        for folder in (value.root, value.data, value.models, value.logs, value.cache, value.exports):
+        for folder in (value.root, value.data, value.models, value.logs, value.cache, value.captures, value.exports):
             folder.mkdir(parents=True, exist_ok=True)
         return value

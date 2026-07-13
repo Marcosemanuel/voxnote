@@ -28,6 +28,7 @@ pluggy==1.6.0
 protobuf==7.35.1
 psutil==7.0.0
 Pygments==2.20.0
+PyAudioWPatch==0.2.12.8
 pyinstaller==6.15.0
 pyinstaller-hooks-contrib==2026.6
 PySide6_Addons==6.11.1

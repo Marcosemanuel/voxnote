@@ -15,9 +15,14 @@ Todas as mudanças visíveis ao usuário serão registradas aqui.
 
 O formato segue categorias `Adicionado`, `Alterado`, `Corrigido`, `Removido` e `Segurança`.
 
-## Não lançado
+## 0.2.0 - Em preparação: captura local de reuniões
 
 ### Adicionado
+
+- Captura local de reuniao: selecao de saida WASAPI, microfone opcional em trilha separada, teste de sinal, confirmacao explicita e blocos WAV recuperaveis no disco.
+- Fluxo final-first para reunioes: transcricao em janelas temporarias limitadas, checkpoints SQLite, revisao sem sobrescrever o reconhecimento e exportacao TXT, SRT, VTT ou JSON.
+- Recuperacao de sessoes interrompidas a partir do journal confirmado de blocos e historico de reunioes salvas na nova tela de captura.
+- Instalador Windows `0.2.0` preparado com o componente WASAPI de captura e atalho Voxnote usando o ícone oficial versionado.
 
 - Aviso de atualização disponível, consultado em segundo plano no GitHub Releases e com abertura manual da página da release.
 - Landing pública Voxnote pronta para Vercel, com página de download, cena de gravação em Three.js e adaptação específica para mobile.
@@ -26,6 +31,7 @@ O formato segue categorias `Adicionado`, `Alterado`, `Corrigido`, `Removido` e `
 
 ### Alterado
 
+- A aba Capturar reunião recebeu controles, cartões de estado, lista de reuniões e revisão no mesmo padrão visual Voxnote.
 - Copy da landing revisada para reforçar posicionamento profissional, privacidade por padrão, compatibilidade Windows 10/11 (64 bits) e fluxo de uso.
 
 - O componente QML `VxComboBox` passou a renderizar o próprio menu de opções. O popup não herda mais a paleta escura do controle nativo do Windows: usa superfície branca, texto escuro, borda neutra e destaque azul-claro.
@@ -49,6 +55,12 @@ O formato segue categorias `Adicionado`, `Alterado`, `Corrigido`, `Removido` e `
 
 ### Corrigido
 
+- Sessões de reunião com blocos preservados agora podem ser transcritas novamente pelo histórico; uma falha no reconhecimento não bloqueia a retomada.
+- A recuperação do journal agora inclui sessões marcadas como falhas, preservando blocos confirmados no disco.
+- Textos do fluxo de captura foram corrigidos para UTF-8, incluindo nomes de qualidade usados para selecionar corretamente o perfil recomendado.
+- As trilhas de sistema e microfone passam a ser monitoradas pelo mesmo relógio QPC; variação superior a 250 ms gera aviso de revisão sem combinar o áudio.
+
+- CI Windows agora cria o ambiente `.venv` antes do build, eliminando a falha de empacotamento no GitHub Actions.
 - Atualizações do Voxnote agora renovam o ícone do atalho existente da área de trabalho usando uma cópia versionada do ativo oficial.
 - Atalho do Voxnote na área de trabalho passou a referenciar explicitamente o ícone oficial em todas as novas instalações e atualizações.
 - Link de download da landing estabilizado: agora usa o ativo permanente `Voxnote-Setup-win64.exe` da Release mais recente, sem depender do número da versão.

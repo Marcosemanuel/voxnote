@@ -24,6 +24,8 @@ ApplicationWindow {
     readonly property string uiAssets: backend.assetRoot + "/ui/"
     property bool closeApproved: false
     property int exportJobId: 0
+    property int exportMeetingSessionId: 0
+    property int exportMeetingRunId: 0
 
     Component.onCompleted: backend.start_update_check()
 
@@ -50,6 +52,14 @@ ApplicationWindow {
         fileMode: FileDialog.SaveFile
         nameFilters: ["Texto (*.txt)", "Legendas SRT (*.srt)", "Legendas WebVTT (*.vtt)", "Dados JSON (*.json)"]
         onAccepted: backend.export_job(root.exportJobId, selectedFile.toString(), selectedNameFilter)
+    }
+
+    FileDialog {
+        id: meetingExportDialog
+        title: "Exportar reunião"
+        fileMode: FileDialog.SaveFile
+        nameFilters: ["Texto (*.txt)", "Legendas SRT (*.srt)", "Legendas WebVTT (*.vtt)", "Dados JSON (*.json)"]
+        onAccepted: backend.export_meeting_run(root.exportMeetingSessionId, root.exportMeetingRunId, selectedFile.toString(), selectedNameFilter)
     }
 
     Dialog {
@@ -256,6 +266,13 @@ ApplicationWindow {
         exportDialog.open();
     }
 
+    function openMeetingExport(sessionId, runId) {
+        root.exportMeetingSessionId = sessionId;
+        root.exportMeetingRunId = runId;
+        meetingExportDialog.currentFile = backend.default_meeting_export_path(sessionId);
+        meetingExportDialog.open();
+    }
+
     component PageTitle: Text {
         color: Theme.ink
         font.family: "Manrope"
@@ -343,6 +360,11 @@ ApplicationWindow {
                             label: "Nova transcrição",
                             icon: "mic.svg",
                             page: 0
+                        },
+                        {
+                            label: "Capturar reunião",
+                            icon: "audio-lines.svg",
+                            page: 7
                         },
                         {
                             label: "Transcrições",
@@ -1346,6 +1368,306 @@ ApplicationWindow {
                                     color: modelData.attention ? "#9A6500" : Theme.success
                                     Layout.preferredWidth: 82
                                 }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Captura local de reunião
+            Item {
+                ScrollView {
+                    id: meetingScroll
+                    anchors.fill: parent
+                    contentWidth: availableWidth
+                    clip: true
+
+                    ColumnLayout {
+                        x: root.pagePadding
+                        width: Math.max(0, meetingScroll.availableWidth - root.pagePadding * 2)
+                        spacing: 18
+
+                        Item { Layout.preferredHeight: 12 }
+                        PageTitle { text: "Capturar reunião" }
+                        BodyText {
+                            text: "Capture o áudio reproduzido no Windows e, se quiser, seu microfone. O processamento é local."
+                            color: Theme.muted
+                            wrapMode: Text.Wrap
+                            Layout.fillWidth: true
+                        }
+
+                        Rectangle {
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: meetingSetup.implicitHeight + 48
+                            radius: Theme.radiusLarge
+                            color: Theme.surface
+                            border.width: 1
+                            border.color: Theme.line
+                            visible: backend.meetingState === "idle" || backend.meetingState === "failed" || backend.meetingState === "completed"
+
+                            ColumnLayout {
+                                id: meetingSetup
+                                anchors.fill: parent
+                                anchors.margins: 24
+                                spacing: 18
+
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    spacing: 12
+                                    Rectangle {
+                                        Layout.preferredWidth: 40
+                                        Layout.preferredHeight: 40
+                                        radius: 20
+                                        color: Theme.primarySoft
+                                        Text { anchors.centerIn: parent; text: "1"; color: Theme.primaryDark; font.family: "Manrope"; font.pixelSize: 16; font.weight: Font.Bold }
+                                    }
+                                    ColumnLayout {
+                                        Layout.fillWidth: true
+                                        spacing: 2
+                                        SectionTitle { text: "Preparar captura" }
+                                        CaptionText { text: "Selecione as fontes de áudio, teste o sinal e confirme a autorização."; Layout.fillWidth: true; wrapMode: Text.Wrap }
+                                    }
+                                }
+
+                                VxCheckBox {
+                                    id: captureConsent
+                                    text: "Confirmo que tenho autorização para gravar esta reunião."
+                                    checked: false
+                                    Layout.fillWidth: true
+                                }
+
+                                GridLayout {
+                                    Layout.fillWidth: true
+                                    columns: width < 760 ? 1 : 2
+                                    columnSpacing: 18
+                                    rowSpacing: 14
+                                    ColumnLayout {
+                                        Layout.fillWidth: true
+                                        Layout.preferredWidth: Math.max(0, (parent.width - parent.columnSpacing) / 2)
+                                        spacing: 6
+                                        CaptionText { text: "Idioma"; color: Theme.ink }
+                                        VxComboBox { id: meetingLanguage; Layout.fillWidth: true; model: ["Português (Brasil)", "Detectar automaticamente", "Inglês", "Espanhol"] }
+                                    }
+                                    ColumnLayout {
+                                        Layout.fillWidth: true
+                                        Layout.preferredWidth: Math.max(0, (parent.width - parent.columnSpacing) / 2)
+                                        spacing: 6
+                                        CaptionText { text: "Qualidade"; color: Theme.ink }
+                                        VxComboBox { id: meetingQuality; Layout.fillWidth: true; model: ["Leve", "Equilibrada", "Alta precisão", "Rápida"]; Component.onCompleted: currentIndex = Math.max(0, model.indexOf(backend.recommendedProfile)) }
+                                    }
+                                    ColumnLayout {
+                                        Layout.fillWidth: true
+                                        Layout.columnSpan: parent.width < 760 ? 1 : 2
+                                        spacing: 6
+                                        CaptionText { text: "Áudio da reunião"; color: Theme.ink }
+                                        VxComboBox {
+                                            id: systemDevice
+                                            Layout.fillWidth: true
+                                            model: backend.meetingSystemDevices.map(function (device) { return device.name + (device.default ? " (padrão)" : ""); })
+                                        }
+                                    }
+                                }
+
+                                VxCheckBox { id: includeMicrophone; text: "Incluir meu microfone em trilha separada"; Layout.fillWidth: true }
+                                ColumnLayout {
+                                    Layout.fillWidth: true
+                                    visible: includeMicrophone.checked
+                                    spacing: 6
+                                    CaptionText { text: "Microfone"; color: Theme.ink }
+                                    VxComboBox { id: microphoneDevice; Layout.fillWidth: true; model: backend.meetingMicrophoneDevices.map(function (device) { return device.name; }) }
+                                }
+
+                                Rectangle {
+                                    Layout.fillWidth: true
+                                    implicitHeight: signalRow.implicitHeight + 24
+                                    radius: Theme.radiusSmall
+                                    color: backend.meetingTested ? "#F0FAF4" : "#F7F8FA"
+                                    border.width: 1
+                                    border.color: backend.meetingTested ? "#B8E4C8" : Theme.line
+                                    RowLayout {
+                                        id: signalRow
+                                        anchors.fill: parent
+                                        anchors.margins: 12
+                                        spacing: 12
+                                        VxButton { text: "Testar sinal"; onClicked: backend.test_meeting_signal(systemDevice.currentIndex, includeMicrophone.checked, microphoneDevice.currentIndex) }
+                                        CaptionText { Layout.fillWidth: true; text: backend.meetingTestMessage || "Teste as fontes antes de iniciar a captura."; color: backend.meetingTested ? Theme.success : Theme.muted; wrapMode: Text.Wrap }
+                                    }
+                                }
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    Item { Layout.fillWidth: true }
+                                    VxButton {
+                                        text: "Iniciar captura"
+                                        primary: true
+                                        enabled: captureConsent.checked && backend.meetingTested && backend.meetingSystemDevices.length > 0
+                                        onClicked: backend.start_meeting_capture(captureConsent.checked, systemDevice.currentIndex, includeMicrophone.checked, microphoneDevice.currentIndex, ["pt", "auto", "en", "es"][meetingLanguage.currentIndex], ["Leve", "Equilibrada", "Alta precisão", "Rápida"][meetingQuality.currentIndex], "")
+                                    }
+                                }
+                            }
+                        }
+
+                        Rectangle {
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: meetingProgress.implicitHeight + 52
+                            radius: Theme.radiusLarge
+                            color: Theme.surface
+                            border.width: 1
+                            border.color: Theme.line
+                            visible: backend.meetingState === "capturing" || backend.meetingState === "stopping" || backend.meetingState === "transcribing"
+
+                            ColumnLayout {
+                                id: meetingProgress
+                                anchors.fill: parent
+                                anchors.margins: 26
+                                spacing: 16
+                                SectionTitle { text: backend.meetingState === "capturing" ? "Captura em andamento" : "Transcrição final em andamento" }
+                                BodyText { text: backend.meetingMessage; wrapMode: Text.Wrap; Layout.fillWidth: true }
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    CaptionText { text: "Duração: " + backend.meetingDuration }
+                                    Item { Layout.fillWidth: true }
+                                    CaptionText { text: "Salvo até: " + backend.meetingLastSaved; color: Theme.success }
+                                }
+                                VxProgressBar {
+                                    Layout.fillWidth: true
+                                    from: 0
+                                    to: 100
+                                    value: backend.meetingState === "transcribing" ? backend.meetingProgress : 100
+                                    indeterminate: backend.meetingState === "capturing" || backend.meetingState === "stopping"
+                                }
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    CaptionText { text: "Saída" }
+                                    VxProgressBar { Layout.preferredWidth: 140; from: 0; to: 1; value: backend.meetingSystemLevel }
+                                    CaptionText { text: "Microfone"; visible: backend.meetingMicrophoneLevel > 0 }
+                                    VxProgressBar { Layout.preferredWidth: 140; from: 0; to: 1; value: backend.meetingMicrophoneLevel; visible: backend.meetingMicrophoneLevel > 0 }
+                                    Item { Layout.fillWidth: true }
+                                    VxButton { text: "Encerrar e transcrever"; primary: true; visible: backend.meetingState === "capturing"; onClicked: backend.stop_meeting_capture() }
+                                }
+                            }
+                        }
+
+                        Rectangle {
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: 156
+                            radius: Theme.radiusLarge
+                            color: Theme.surface
+                            border.width: 1
+                            border.color: Theme.line
+                            visible: backend.meetingState === "completed"
+                            RowLayout {
+                                anchors.fill: parent
+                                anchors.margins: 24
+                                Rectangle {
+                                    Layout.preferredWidth: 42
+                                    Layout.preferredHeight: 42
+                                    radius: 21
+                                    color: "#F0FAF4"
+                                    Text { anchors.centerIn: parent; text: "\u2713"; color: Theme.success; font.family: "Manrope"; font.pixelSize: 20; font.weight: Font.Bold }
+                                }
+                                ColumnLayout {
+                                    Layout.fillWidth: true
+                                    SectionTitle { text: "Transcrição final pronta" }
+                                    BodyText { text: backend.meetingMessage; color: Theme.muted; wrapMode: Text.Wrap; Layout.fillWidth: true }
+                                }
+                                VxButton { text: "Revisar reunião"; primary: true; onClicked: backend.open_meeting_review(backend.meetingSessionId) }
+                            }
+                        }
+
+                        RowLayout {
+                            Layout.fillWidth: true
+                            SectionTitle { text: "Reuniões salvas" }
+                            Item { Layout.fillWidth: true }
+                            CaptionText { text: backend.meetingSessions.length + " item(ns)" }
+                        }
+                        Repeater {
+                            model: backend.meetingSessions
+                            delegate: Rectangle {
+                                required property var modelData
+                                Layout.fillWidth: true
+                                Layout.preferredHeight: 92
+                                radius: Theme.radius
+                                color: Theme.surface
+                                border.width: 1
+                                border.color: Theme.line
+                                RowLayout {
+                                    anchors.fill: parent
+                                    anchors.margins: 18
+                                    spacing: 14
+                                    Rectangle {
+                                        Layout.preferredWidth: 40
+                                        Layout.preferredHeight: 40
+                                        radius: 20
+                                        color: Theme.primarySoft
+                                        Text { anchors.centerIn: parent; text: "\u266B"; color: Theme.primaryDark; font.family: "Manrope"; font.pixelSize: 20; font.weight: Font.DemiBold }
+                                    }
+                                    ColumnLayout {
+                                        Layout.fillWidth: true
+                                        BodyText { text: modelData.title; font.weight: Font.DemiBold; elide: Text.ElideRight; Layout.fillWidth: true }
+                                        CaptionText { text: modelData.status + "  •  " + modelData.duration }
+                                    }
+                                    VxButton {
+                                        text: modelData.canReview ? "Reprocessar" : "Transcrever"
+                                        visible: modelData.canTranscribe
+                                        primary: !modelData.canReview
+                                        onClicked: backend.resume_meeting_transcription(modelData.id)
+                                    }
+                                    VxButton {
+                                        text: "Revisar"
+                                        enabled: modelData.canReview
+                                        onClicked: backend.open_meeting_review(modelData.id)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Revisão de reunião
+            Item {
+                ColumnLayout {
+                    anchors.fill: parent
+                    anchors.margins: root.pagePadding
+                    spacing: 18
+                    RowLayout {
+                        Layout.fillWidth: true
+                        PageTitle { text: backend.meetingReviewTitle; Layout.fillWidth: true; elide: Text.ElideMiddle }
+                        VxButton { text: "Voltar"; onClicked: backend.navigate(7) }
+                        VxButton { text: "Exportar"; primary: true; onClicked: root.openMeetingExport(backend.meetingReviewSessionId, backend.meetingReviewRunId) }
+                    }
+                    CaptionText { text: "Edite os trechos necessários. O texto reconhecido original permanece preservado."; Layout.fillWidth: true }
+                    ListView {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        clip: true
+                        spacing: 10
+                        model: backend.meetingReviewSegments
+                        delegate: Rectangle {
+                            required property var modelData
+                            width: ListView.view.width
+                            height: Math.max(94, meetingEdit.implicitHeight + 34)
+                            radius: Theme.radius
+                            color: Theme.surface
+                            border.width: 1
+                            border.color: modelData.attention ? "#F2C66D" : Theme.line
+                            RowLayout {
+                                anchors.fill: parent
+                                anchors.margins: 14
+                                spacing: 14
+                                ColumnLayout {
+                                    Layout.preferredWidth: 145
+                                    CaptionText { text: modelData.time; color: Theme.muted }
+                                    CaptionText { text: modelData.track; color: Theme.primaryDark }
+                                }
+                                VxTextArea {
+                                    id: meetingEdit
+                                    text: modelData.text
+                                    Layout.fillWidth: true
+                                    Layout.minimumHeight: 70
+                                    onEditingFinished: backend.revise_meeting_segment(modelData.id, text)
+                                }
+                                CaptionText { text: modelData.attention ? "Verifique" : "Normal"; color: modelData.attention ? "#9A6500" : Theme.success; Layout.preferredWidth: 82 }
                             }
                         }
                     }

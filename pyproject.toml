@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "transcritor-local"
-version = "0.1.1"
+version = "0.2.0"
 description = "Transcrição local de áudios longos para Windows x64"
 requires-python = ">=3.12,<3.13"
 dependencies = [
@@ -12,6 +12,7 @@ dependencies = [
   "av==15.0.0",
   "faster-whisper==1.2.0",
   "psutil==7.0.0",
+  "PyAudioWPatch==0.2.12.8",
   "requests==2.32.4",
 ]
 

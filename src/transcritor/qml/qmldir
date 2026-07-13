@@ -2,4 +2,7 @@ singleton Theme 1.0 Theme.qml
 VxButton 1.0 components/VxButton.qml
 VxField 1.0 components/VxField.qml
 VxComboBox 1.0 components/VxComboBox.qml
+VxCheckBox 1.0 components/VxCheckBox.qml
+VxProgressBar 1.0 components/VxProgressBar.qml
+VxTextArea 1.0 components/VxTextArea.qml
 NavItem 1.0 components/NavItem.qml

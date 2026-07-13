@@ -75,6 +75,7 @@ Para publicar uma Release, use `./scripts/publish-release.ps1 -Version <versão>
 - [Estado real](docs/STATUS.md)
 - [Decisões](docs/DECISIONS.md)
 - [Landing](docs/LANDING.md)
+- [Captura local de reuniões](docs/MEETING_CAPTURE.md)
 - [Contribuição](CONTRIBUTING.md)
 - [Segurança](SECURITY.md)
 

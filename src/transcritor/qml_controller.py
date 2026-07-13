@@ -1,21 +1,32 @@
 from __future__ import annotations
 
+import json
 import logging
+import queue
+import threading
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from PySide6.QtCore import Property, QObject, QThread, QUrl, Signal, Slot
+from PySide6.QtCore import Property, QObject, QThread, QTimer, QUrl, Signal, Slot
 
 from transcritor.audio import AudioValidationError, inspect_audio
 from transcritor.database import Database
 from transcritor.domain import MODEL_PROFILES, STATUS_LABELS, AudioInfo, HardwareProfile, JobStatus, format_duration
 from transcritor.engine import TranscriptionController
 from transcritor.hardware import detect_hardware
+from transcritor.meeting import AudioDevice, CaptureError, MeetingCaptureService, list_capture_devices, measure_signal
 from transcritor.models import ModelManager
 from transcritor.paths import AppPaths
 from transcritor.resources import bundled_path
 from transcritor.updates import UpdateCheckWorker
-from transcritor.workers import ExportWorker, ModelDownloadWorker, TranscriptionWorker
+from transcritor.workers import (
+    ExportWorker,
+    MeetingExportWorker,
+    MeetingTranscriptionWorker,
+    ModelDownloadWorker,
+    TranscriptionWorker,
+)
 
 LOG = logging.getLogger(__name__)
 
@@ -33,6 +44,10 @@ class QmlController(QObject):
     closeRequested = Signal()
     modelDownloadActiveChanged = Signal()
     exportActiveChanged = Signal()
+    meetingChanged = Signal()
+    meetingReviewChanged = Signal()
+    meetingStopFinished = Signal(bool, str)
+    meetingSignalFinished = Signal(float, float, str)
     noticeRequested = Signal(str, str, str)
     confirmationRequested = Signal(str, str, str)
     updateChanged = Signal()
@@ -64,15 +79,44 @@ class QmlController(QObject):
         self._model_thread: QThread | None = None
         self._model_worker: ModelDownloadWorker | None = None
         self._export_thread: QThread | None = None
-        self._export_worker: ExportWorker | None = None
+        self._export_worker: ExportWorker | MeetingExportWorker | None = None
         self._pending_confirmation: tuple[str, int | str | None] | None = None
         self._update_thread: QThread | None = None
         self._update_worker: UpdateCheckWorker | None = None
         self._update_available = False
         self._update_version = ""
         self._update_url = ""
+        self._meeting_system_devices: list[AudioDevice] = []
+        self._meeting_microphone_devices: list[AudioDevice] = []
+        self._meeting_service: MeetingCaptureService | None = None
+        self._meeting_session_id = 0
+        self._meeting_track_ids: dict[str, int] = {}
+        self._meeting_state = "idle"
+        self._meeting_duration_ms = 0
+        self._meeting_last_saved_ms = 0
+        self._meeting_system_level = 0.0
+        self._meeting_microphone_level = 0.0
+        self._meeting_progress = 0.0
+        self._meeting_message = "Selecione os dispositivos e teste o sinal antes de iniciar."
+        self._meeting_tested = False
+        self._meeting_test_message = ""
+        self._meeting_timer = QTimer(self)
+        self._meeting_timer.setInterval(200)
+        self._meeting_timer.timeout.connect(self._poll_meeting_events)
+        self._meeting_thread: QThread | None = None
+        self._meeting_worker: MeetingTranscriptionWorker | None = None
+        self._meeting_controller: TranscriptionController | None = None
+        self._meeting_review_session = 0
+        self._meeting_review_run = 0
+        self._meeting_review_title = "Revisão da reunião"
+        self._meeting_review_segments: list[dict[str, Any]] = []
+        self._meeting_sessions: list[dict[str, Any]] = []
+        self.meetingStopFinished.connect(self._finish_meeting_stop)
+        self.meetingSignalFinished.connect(self._finish_meeting_signal_test)
+        self._recover_meeting_sessions()
         self.refresh_jobs()
         self.refresh_models()
+        self.refresh_meeting_sessions()
 
     @Property(int, notify=pageChanged)
     def page(self) -> int:
@@ -133,7 +177,9 @@ class QmlController(QObject):
 
     @Property(bool, notify=transcriptionActiveChanged)
     def transcriptionActive(self) -> bool:
-        return self._worker_thread is not None and self._worker_thread.isRunning()
+        return (self._worker_thread is not None and self._worker_thread.isRunning()) or (
+            self._meeting_thread is not None and self._meeting_thread.isRunning()
+        )
 
     @Property(bool, notify=modelDownloadActiveChanged)
     def modelDownloadActive(self) -> bool:
@@ -165,6 +211,83 @@ class QmlController(QObject):
         if job is None:
             return QUrl.fromLocalFile(str(self.paths.exports / "transcricao.txt")).toString()
         return QUrl.fromLocalFile(str(self.paths.exports / f"{Path(job['audio_name']).stem}.txt")).toString()
+
+    @Slot(int, result=str)
+    def default_meeting_export_path(self, session_id: int) -> str:
+        session = self.database.get_meeting_session(session_id)
+        title = str(session["title"]) if session is not None else "reuniao"
+        safe_name = "".join(
+            character if character.isalnum() or character in "-_ " else "" for character in title
+        ).strip()
+        return QUrl.fromLocalFile(str(self.paths.exports / f"{safe_name or 'reuniao'}.txt")).toString()
+
+    @Property(list, notify=meetingChanged)
+    def meetingSystemDevices(self) -> list[dict[str, Any]]:
+        return [self._device_payload(device) for device in self._meeting_system_devices]
+
+    @Property(list, notify=meetingChanged)
+    def meetingMicrophoneDevices(self) -> list[dict[str, Any]]:
+        return [self._device_payload(device) for device in self._meeting_microphone_devices]
+
+    @Property(str, notify=meetingChanged)
+    def meetingState(self) -> str:
+        return self._meeting_state
+
+    @Property(str, notify=meetingChanged)
+    def meetingMessage(self) -> str:
+        return self._meeting_message
+
+    @Property(float, notify=meetingChanged)
+    def meetingProgress(self) -> float:
+        return self._meeting_progress
+
+    @Property(str, notify=meetingChanged)
+    def meetingDuration(self) -> str:
+        return format_duration(self._meeting_duration_ms / 1000)
+
+    @Property(str, notify=meetingChanged)
+    def meetingLastSaved(self) -> str:
+        return format_duration(self._meeting_last_saved_ms / 1000)
+
+    @Property(float, notify=meetingChanged)
+    def meetingSystemLevel(self) -> float:
+        return min(1.0, self._meeting_system_level * 4)
+
+    @Property(float, notify=meetingChanged)
+    def meetingMicrophoneLevel(self) -> float:
+        return min(1.0, self._meeting_microphone_level * 4)
+
+    @Property(bool, notify=meetingChanged)
+    def meetingTested(self) -> bool:
+        return self._meeting_tested
+
+    @Property(str, notify=meetingChanged)
+    def meetingTestMessage(self) -> str:
+        return self._meeting_test_message
+
+    @Property(int, notify=meetingChanged)
+    def meetingSessionId(self) -> int:
+        return self._meeting_session_id
+
+    @Property(str, notify=meetingReviewChanged)
+    def meetingReviewTitle(self) -> str:
+        return self._meeting_review_title
+
+    @Property(list, notify=meetingReviewChanged)
+    def meetingReviewSegments(self) -> list[dict[str, Any]]:
+        return self._meeting_review_segments
+
+    @Property(int, notify=meetingReviewChanged)
+    def meetingReviewSessionId(self) -> int:
+        return self._meeting_review_session
+
+    @Property(int, notify=meetingReviewChanged)
+    def meetingReviewRunId(self) -> int:
+        return self._meeting_review_run
+
+    @Property(list, notify=meetingChanged)
+    def meetingSessions(self) -> list[dict[str, Any]]:
+        return self._meeting_sessions
 
     @Property(str, constant=True)
     def recommendedProfile(self) -> str:
@@ -199,6 +322,439 @@ class QmlController(QObject):
     def acceleration(self) -> str:
         return self.hardware.gpu_name or "Processamento por CPU"
 
+    @staticmethod
+    def _device_payload(device: AudioDevice) -> dict[str, Any]:
+        return {
+            "index": device.index,
+            "name": device.name,
+            "channels": device.channels,
+            "sampleRate": device.sample_rate,
+            "default": device.is_default,
+        }
+
+    @Slot()
+    def refresh_meeting_devices(self) -> None:
+        if self._meeting_state in {"capturing", "stopping", "transcribing"}:
+            return
+        try:
+            self._meeting_system_devices, self._meeting_microphone_devices = list_capture_devices()
+            self._meeting_message = "Dispositivos atualizados. Execute o teste de sinal antes de iniciar."
+        except CaptureError as exc:
+            self._meeting_system_devices = []
+            self._meeting_microphone_devices = []
+            self._meeting_message = str(exc)
+        self._meeting_tested = False
+        self._meeting_test_message = ""
+        self.meetingChanged.emit()
+
+    def _recover_meeting_sessions(self) -> None:
+        """Import finalized journal blocks left by an interrupted capture before exposing sessions."""
+        # A failed capture/transcription may still have fsync-confirmed journal blocks.
+        # Importing them makes the preserved audio available for a safe retry.
+        recoverable = {"preparing", "capturing", "stopping", "failed"}
+        for session in self.database.list_meeting_sessions():
+            if str(session["status"]) not in recoverable:
+                continue
+            capture_root = Path(str(session["capture_path"]))
+            capture_tracks = self.database.list_capture_tracks(int(session["id"]))
+            tracks = {str(track["kind"]): int(track["id"]) for track in capture_tracks}
+            journal = capture_root / "capture.journal.ndjson"
+            maximum_end = 0
+            if journal.is_file():
+                for raw_event in journal.read_text(encoding="utf-8").splitlines():
+                    try:
+                        event = json.loads(raw_event)
+                    except json.JSONDecodeError:
+                        continue
+                    if event.get("event") != "block_committed":
+                        continue
+                    kind = str(event.get("kind", ""))
+                    block_path = Path(str(event.get("path", "")))
+                    if kind not in tracks or not block_path.is_file():
+                        continue
+                    self.database.save_capture_block(
+                        tracks[kind],
+                        int(event["sequence"]),
+                        block_path,
+                        int(event["started_ms"]),
+                        int(event["duration_ms"]),
+                        int(event["bytes"]),
+                        str(event["sha256"]),
+                    )
+                    maximum_end = max(maximum_end, int(event["started_ms"]) + int(event["duration_ms"]))
+            if maximum_end:
+                self.database.update_meeting_session(int(session["id"]), "captured", duration_ms=maximum_end)
+            else:
+                self.database.update_meeting_session(
+                    int(session["id"]),
+                    "failed",
+                    error="A captura foi interrompida antes de concluir um bloco recuperável.",
+                )
+
+    def refresh_meeting_sessions(self) -> None:
+        labels = {
+            "preparing": "Preparando",
+            "capturing": "Captura interrompida",
+            "captured": "Pronta para transcrever",
+            "transcribing": "Transcrevendo",
+            "completed": "Concluída",
+            "failed": "Requer atenção",
+        }
+        self._meeting_sessions = [
+            {
+                "id": int(row["id"]),
+                "title": str(row["title"]),
+                "duration": format_duration(int(row["duration_ms"]) / 1000),
+                "status": labels.get(str(row["status"]), str(row["status"])),
+                "canReview": self.database.get_latest_transcription_run(int(row["id"])) is not None,
+                "canTranscribe": self.database.capture_block_count(int(row["id"])) > 0
+                and str(row["status"]) not in {"capturing", "stopping", "transcribing"},
+            }
+            for row in self.database.list_meeting_sessions()
+        ]
+        self.meetingChanged.emit()
+
+    @Slot(int, bool, int)
+    def test_meeting_signal(self, system_row: int, include_microphone: bool, microphone_row: int) -> None:
+        try:
+            system = self._meeting_system_devices[system_row]
+            microphone = self._meeting_microphone_devices[microphone_row] if include_microphone else None
+        except IndexError:
+            self.noticeRequested.emit(
+                "warning", "Selecione os dispositivos", "Escolha uma saída de áudio válida antes do teste."
+            )
+            return
+        self._meeting_tested = False
+        self._meeting_test_message = "Testando áudio. Fale e deixe o som da reunião tocar..."
+        self.meetingChanged.emit()
+
+        def measure() -> None:
+            try:
+                output = measure_signal(system)
+                voice = measure_signal(microphone) if microphone is not None else 0.0
+                self.meetingSignalFinished.emit(output, voice, "")
+            except CaptureError as exc:
+                self.meetingSignalFinished.emit(0.0, 0.0, str(exc))
+
+        threading.Thread(target=measure, name="voxnote-signal-test", daemon=True).start()
+
+    @Slot(float, float, str)
+    def _finish_meeting_signal_test(self, output: float, voice: float, error: str) -> None:
+        if error:
+            self._meeting_tested = False
+            self._meeting_test_message = error
+        else:
+            self._meeting_system_level = output
+            self._meeting_microphone_level = voice
+            self._meeting_tested = output > 0.002
+            if self._meeting_tested:
+                self._meeting_test_message = "Sinal da saída confirmado. Você pode iniciar a captura."
+            else:
+                self._meeting_test_message = (
+                    "Nenhum áudio foi detectado. Confirme a saída do Windows e execute o teste novamente."
+                )
+        self.meetingChanged.emit()
+
+    @Slot(bool, int, bool, int, str, str, str)
+    def start_meeting_capture(
+        self,
+        consent: bool,
+        system_row: int,
+        include_microphone: bool,
+        microphone_row: int,
+        language: str,
+        profile: str,
+        glossary: str,
+    ) -> None:
+        if self._meeting_state not in {"idle", "completed", "failed"}:
+            return
+        if not consent:
+            self.noticeRequested.emit(
+                "warning", "Confirmação necessária", "Confirme que você está autorizado a gravar a reunião."
+            )
+            return
+        if not self._meeting_tested:
+            self.noticeRequested.emit(
+                "warning", "Teste de sinal pendente", "Teste a saída de áudio antes de iniciar a captura."
+            )
+            return
+        try:
+            system = self._meeting_system_devices[system_row]
+            microphone = self._meeting_microphone_devices[microphone_row] if include_microphone else None
+        except IndexError:
+            self.noticeRequested.emit(
+                "warning", "Dispositivo indisponível", "Atualize a lista de dispositivos e tente novamente."
+            )
+            return
+        if profile not in MODEL_PROFILES:
+            self.noticeRequested.emit("warning", "Qualidade inválida", "Selecione um perfil de transcrição disponível.")
+            return
+        capture_root = self.paths.captures / datetime.now().strftime("%Y%m%d-%H%M%S")
+        language_value = None if language == "auto" else language
+        glossary_value = ", ".join(line.strip() for line in glossary.splitlines() if line.strip())
+        session_id = self.database.create_meeting_session(
+            f"Reunião {datetime.now().strftime('%d/%m/%Y %H:%M')}",
+            language_value,
+            profile,
+            MODEL_PROFILES[profile],
+            glossary_value,
+            "final-first",
+            capture_root,
+        )
+        self._meeting_track_ids = {
+            "system": self.database.create_capture_track(
+                session_id, "system", system.index, system.name, system.sample_rate, system.channels
+            )
+        }
+        if microphone is not None:
+            self._meeting_track_ids["microphone"] = self.database.create_capture_track(
+                session_id, "microphone", microphone.index, microphone.name, microphone.sample_rate, microphone.channels
+            )
+        try:
+            service = MeetingCaptureService(capture_root, system, microphone)
+            service.start()
+        except CaptureError as exc:
+            self.database.update_meeting_session(session_id, "failed", error=str(exc))
+            self.noticeRequested.emit("error", "Não foi possível iniciar a captura", str(exc))
+            return
+        self._meeting_service = service
+        self._meeting_session_id = session_id
+        self._meeting_state = "capturing"
+        self._meeting_duration_ms = 0
+        self._meeting_last_saved_ms = 0
+        self._meeting_progress = 0
+        self._meeting_message = "Capturando localmente. O áudio permanece nesta máquina."
+        self.database.update_meeting_session(session_id, "capturing")
+        self._meeting_timer.start()
+        self.meetingChanged.emit()
+
+    @Slot()
+    def stop_meeting_capture(self) -> None:
+        if self._meeting_service is None or self._meeting_state != "capturing":
+            return
+        self._meeting_state = "stopping"
+        self._meeting_message = "Finalizando os blocos em disco com segurança..."
+        self.meetingChanged.emit()
+        service = self._meeting_service
+
+        def stop() -> None:
+            try:
+                service.stop()
+                self.meetingStopFinished.emit(True, "")
+            except CaptureError as exc:
+                self.meetingStopFinished.emit(False, str(exc))
+
+        threading.Thread(target=stop, name="voxnote-stop-capture", daemon=True).start()
+
+    @Slot(bool, str)
+    def _finish_meeting_stop(self, stopped: bool, error: str) -> None:
+        self._meeting_timer.stop()
+        service = self._meeting_service
+        if not stopped or service is None:
+            self._meeting_state = "failed"
+            self._meeting_message = error or "A captura não pôde ser finalizada com segurança."
+            if self._meeting_session_id:
+                self.database.update_meeting_session(self._meeting_session_id, "failed", error=self._meeting_message)
+            self.meetingChanged.emit()
+            return
+        self._poll_meeting_events()
+        self._meeting_duration_ms = service.duration_ms
+        self.database.update_meeting_session(
+            self._meeting_session_id, "captured", duration_ms=self._meeting_duration_ms
+        )
+        self._meeting_state = "transcribing"
+        self._meeting_message = "Preparando a transcrição final em blocos. A interface continua disponível."
+        self.meetingChanged.emit()
+        self._start_meeting_transcription(self._meeting_session_id)
+
+    @Slot()
+    def _poll_meeting_events(self) -> None:
+        service = self._meeting_service
+        if service is None:
+            return
+        self._meeting_duration_ms = service.duration_ms
+        while True:
+            try:
+                event = service.events.get_nowait()
+            except queue.Empty:
+                break
+            event_name = str(event["event"])
+            if event_name == "block_committed":
+                track_id = self._meeting_track_ids.get(str(event["kind"]))
+                if track_id is not None:
+                    self.database.save_capture_block(
+                        track_id,
+                        int(event["sequence"]),
+                        Path(str(event["path"])),
+                        int(event["started_ms"]),
+                        int(event["duration_ms"]),
+                        int(event["bytes"]),
+                        str(event["sha256"]),
+                    )
+                    self._meeting_last_saved_ms = max(
+                        self._meeting_last_saved_ms, int(event["started_ms"]) + int(event["duration_ms"])
+                    )
+                if event["kind"] == "system":
+                    self._meeting_system_level = float(event["level"])
+                else:
+                    self._meeting_microphone_level = float(event["level"])
+            elif event_name == "capture_degraded":
+                self._meeting_message = str(event["message"])
+            elif event_name == "track_synchronization":
+                # Block timestamps already use the same QPC origin. This records measured drift
+                # without combining or changing either source track.
+                if abs(int(event["drift_ms"])) > 250:
+                    self._meeting_message = (
+                        f"Sincronização das trilhas variou {abs(int(event['drift_ms']))} ms. "
+                        "Revise os trechos antes de exportar."
+                    )
+            elif event_name == "fatal_error":
+                self._meeting_state = "failed"
+                self._meeting_message = str(event["message"])
+                self.database.update_meeting_session(self._meeting_session_id, "failed", error=self._meeting_message)
+                self._meeting_timer.stop()
+                self.noticeRequested.emit("error", "Captura interrompida", self._meeting_message)
+        self.meetingChanged.emit()
+
+    def _start_meeting_transcription(self, session_id: int) -> None:
+        self._meeting_controller = TranscriptionController()
+        self._meeting_thread = QThread(self)
+        self._meeting_worker = MeetingTranscriptionWorker(
+            self.database, session_id, self.paths.models, self.paths.cache / "meeting-windows", self._meeting_controller
+        )
+        self._meeting_worker.moveToThread(self._meeting_thread)
+        self._meeting_thread.started.connect(self._meeting_worker.run)
+        self._meeting_worker.progress.connect(self._update_meeting_progress)
+        self._meeting_worker.completed.connect(self._meeting_completed)
+        self._meeting_worker.cancelled.connect(self._meeting_cancelled)
+        self._meeting_worker.failed.connect(self._meeting_failed)
+        self._meeting_worker.completed.connect(self._meeting_thread.quit)
+        self._meeting_worker.cancelled.connect(self._meeting_thread.quit)
+        self._meeting_worker.failed.connect(self._meeting_thread.quit)
+        self._meeting_thread.finished.connect(self._meeting_worker.deleteLater)
+        self._meeting_thread.finished.connect(self._meeting_thread.deleteLater)
+        self._meeting_thread.finished.connect(self.transcriptionActiveChanged)
+        self._meeting_thread.finished.connect(self._meeting_worker_finished)
+        self._meeting_thread.start()
+        self.transcriptionActiveChanged.emit()
+
+    @Slot(int)
+    def resume_meeting_transcription(self, session_id: int) -> None:
+        """Start a new immutable final run from persisted capture blocks."""
+        if self.transcriptionActive or self._meeting_state in {"capturing", "stopping", "transcribing"}:
+            return
+        session = self.database.get_meeting_session(session_id)
+        if session is None or self.database.capture_block_count(session_id) == 0:
+            self.noticeRequested.emit(
+                "warning",
+                "Blocos indisponíveis",
+                "Não há blocos de áudio confirmados para transcrever. O trabalho existente foi preservado.",
+            )
+            return
+        self._meeting_service = None
+        self._meeting_session_id = session_id
+        self._meeting_track_ids = {}
+        self._meeting_state = "transcribing"
+        self._meeting_progress = 0
+        self._meeting_duration_ms = int(session["duration_ms"])
+        self._meeting_last_saved_ms = int(session["duration_ms"])
+        self._meeting_message = "Retomando a transcrição final dos blocos preservados."
+        self.database.update_meeting_session(session_id, "transcribing")
+        self.meetingChanged.emit()
+        self._start_meeting_transcription(session_id)
+
+    @Slot(float, str)
+    def _update_meeting_progress(self, value: float, message: str) -> None:
+        self._meeting_progress = value
+        self._meeting_message = message
+        self.meetingChanged.emit()
+
+    @Slot(int)
+    def _meeting_completed(self, run_id: int) -> None:
+        self._meeting_state = "completed"
+        self._meeting_progress = 100
+        self._meeting_message = "Transcrição final concluída. Revise e exporte quando estiver pronto."
+        self._meeting_review_run = run_id
+        self.refresh_meeting_sessions()
+        self.meetingChanged.emit()
+        self.noticeRequested.emit("success", "Reunião transcrita", "A transcrição final está pronta para revisão.")
+
+    @Slot(int)
+    def _meeting_cancelled(self, _run_id: int) -> None:
+        self._meeting_state = "completed"
+        self._meeting_message = "Processamento interrompido. Os blocos capturados foram preservados."
+        self.refresh_meeting_sessions()
+        self.meetingChanged.emit()
+
+    @Slot(str)
+    def _meeting_failed(self, error: str) -> None:
+        self._meeting_state = "failed"
+        self._meeting_message = f"Os blocos capturados foram preservados. {error}"
+        self.refresh_meeting_sessions()
+        self.meetingChanged.emit()
+        self.noticeRequested.emit("error", "Transcrição da reunião interrompida", self._meeting_message)
+
+    @Slot()
+    def _meeting_worker_finished(self) -> None:
+        if self._pending_confirmation is not None and self._pending_confirmation[0] == "close":
+            self.closeRequested.emit()
+
+    @Slot(int)
+    def open_meeting_review(self, session_id: int) -> None:
+        session = self.database.get_meeting_session(session_id)
+        run = self.database.get_latest_transcription_run(session_id)
+        if session is None or run is None:
+            self.noticeRequested.emit(
+                "info", "Ainda não há transcrição", "Finalize a captura e aguarde a transcrição final."
+            )
+            return
+        self._meeting_review_session = session_id
+        self._meeting_review_run = int(run["id"])
+        self._meeting_review_title = str(session["title"])
+        self._meeting_review_segments = [
+            {
+                "id": int(row["id"]),
+                "time": (
+                    f"{format_duration(int(row['start_ms']) / 1000)} – {format_duration(int(row['end_ms']) / 1000)}"
+                ),
+                "track": "Sistema" if row["track_kind"] == "system" else "Microfone",
+                "text": str(row["revised_text"] or row["original_text"]),
+                "attention": bool(row["review_required"]),
+            }
+            for row in self.database.list_run_segments(self._meeting_review_run)
+        ]
+        self.meetingReviewChanged.emit()
+        self.navigate(8)
+
+    @Slot(int, str)
+    def revise_meeting_segment(self, segment_id: int, text: str) -> None:
+        self.database.revise_run_segment(segment_id, text)
+
+    @Slot(int, int, str, str)
+    def export_meeting_run(self, session_id: int, run_id: int, destination_url: str, selected: str) -> None:
+        if self.exportActive or not destination_url:
+            return
+        destination = Path(QUrl(destination_url).toLocalFile() or destination_url)
+        kind = {
+            "Texto (*.txt)": "txt",
+            "Legendas SRT (*.srt)": "srt",
+            "Legendas WebVTT (*.vtt)": "vtt",
+            "Dados JSON (*.json)": "json",
+        }.get(selected, destination.suffix[1:].lower())
+        self._export_thread = QThread(self)
+        self._export_worker = MeetingExportWorker(self.database, session_id, run_id, destination, kind)
+        self._export_worker.moveToThread(self._export_thread)
+        self._export_thread.started.connect(self._export_worker.run)
+        self._export_worker.completed.connect(self._export_completed)
+        self._export_worker.failed.connect(self._export_failed)
+        self._export_worker.completed.connect(self._export_thread.quit)
+        self._export_worker.failed.connect(self._export_thread.quit)
+        self._export_thread.finished.connect(self._export_worker.deleteLater)
+        self._export_thread.finished.connect(self._export_thread.deleteLater)
+        self._export_thread.finished.connect(self.exportActiveChanged)
+        self._export_thread.start()
+        self.exportActiveChanged.emit()
+
     @Slot()
     def start_update_check(self) -> None:
         if self._update_thread is not None:
@@ -226,6 +782,8 @@ class QmlController(QObject):
             self.refresh_jobs()
         elif page == 2:
             self.refresh_models()
+        elif page == 7:
+            self.refresh_meeting_devices()
         self._page = page
         self.pageChanged.emit()
 
@@ -546,6 +1104,13 @@ class QmlController(QObject):
         if self.modelDownloadActive:
             self.noticeRequested.emit("info", "Download em andamento", "Aguarde o download terminar antes de fechar.")
             return
+        if self._meeting_state in {"capturing", "stopping"}:
+            self.noticeRequested.emit(
+                "info",
+                "Captura em andamento",
+                "Encerre a captura para confirmar os blocos antes de fechar o aplicativo.",
+            )
+            return
         if self.transcriptionActive:
             self._pending_confirmation = ("close", None)
             self.confirmationRequested.emit(
@@ -566,11 +1131,16 @@ class QmlController(QObject):
             self._controller.cancel()
             self._progress_latest = "Cancelando com segurança após o trecho atual..."
             self.progressChanged.emit()
-        elif action == "close" and self._controller is not None:
+        elif action == "close":
             self._pending_confirmation = ("close", None)
-            self._controller.cancel()
-            self._progress_latest = "Cancelando com segurança antes de fechar..."
-            self.progressChanged.emit()
+            if self._controller is not None:
+                self._controller.cancel()
+                self._progress_latest = "Cancelando com segurança antes de fechar..."
+                self.progressChanged.emit()
+            elif self._meeting_controller is not None:
+                self._meeting_controller.cancel()
+                self._meeting_message = "Cancelando a transcrição final com os blocos preservados antes de fechar..."
+                self.meetingChanged.emit()
         elif action == "delete" and isinstance(value, int):
             self.database.delete_job(value)
             self.refresh_jobs()

@@ -79,3 +79,9 @@ Pessoa que precisa transcrever entrevistas, reuniões, aulas, gravações profis
 - Tempo de processamento por hora de áudio.
 - Quantidade de segmentos sinalizados e revisados.
 - Falhas de GPU recuperadas por fallback para CPU.
+
+## 9. Extensão aprovada: captura local de reuniões
+
+Após o MVP, o Voxnote poderá capturar manualmente o áudio reproduzido no Windows durante uma reunião e transcrevê-lo localmente. O caso inicial é Google Meet, sem depender de extensão de navegador ou de API Google.
+
+O texto exibido durante a reunião é provisório. A entrega de precisão é o reprocessamento final do áudio capturado, seguido da revisão humana normal.

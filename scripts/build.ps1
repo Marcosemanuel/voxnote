@@ -32,6 +32,7 @@ Invoke-Checked .\.venv\Scripts\pyinstaller.exe --noconfirm --clean --windowed --
     --collect-all faster_whisper `
     --collect-all ctranslate2 `
     --collect-all av `
+    --collect-all pyaudiowpatch `
     src\transcritor\app.py
 
 Write-Host "Build criado em $Root\dist\TranscritorLocal"

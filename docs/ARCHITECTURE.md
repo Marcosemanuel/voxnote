@@ -216,3 +216,13 @@ Perfis de UI não devem expor detalhes internos:
 - Dados e modelos sobrevivem a atualização.
 - Dependências são fixadas e suas licenças registradas.
 - Modelos não entram no instalador.
+
+## 12. Captura local de reuniões
+
+A captura usa o port isolado `MeetingCaptureService` e o adaptador Windows PyAudioWPatch/WASAPI para a saída do sistema e microfone opcional em fluxos separados.
+
+O gravador escreve blocos incrementais no disco com arquivo parcial, fsync, troca atômica e journal NDJSON; a transcrição recebe somente blocos fechados. A persistência registra sessão, dispositivos, consentimento, blocos e versões de reconhecimento. O worker de captura e o worker de inferência permanecem fora da thread de UI e não executam inferências pesadas em paralelo.
+
+As trilhas são mantidas separadas. Cada bloco recebe timestamp relativo ao mesmo `perf_counter_ns` (QPC); quando há microfone, o serviço mede a diferença de início por sequência, conserva esse offset nos timestamps e sinaliza variação superior a 250 ms. A primeira entrega não mistura PCM nem tenta corrigir fala de modo destrutivo.
+
+A stack detalhada, o schema, perfis e gates estão em `docs/MEETING_CAPTURE_STACK_FRONTEND.md`. O helper C++20 x64 continua uma alternativa de endurecimento após a prova de 60 minutos; a entrega atual usa PyAudioWPatch e é empacotada junto da aplicação Python.

@@ -43,6 +43,13 @@ def test_installer_refreshes_an_existing_desktop_shortcut_after_update() -> None
     assert "if CurStep = ssPostInstall then" in installer
 
 
+def test_build_collects_the_dynamic_wasapi_capture_dependency() -> None:
+    build_script = Path("scripts/build.ps1").read_text(encoding="utf-8")
+    spec = Path("TranscritorLocal.spec").read_text(encoding="utf-8")
+    assert "--collect-all pyaudiowpatch" in build_script
+    assert "collect_all('pyaudiowpatch')" in spec
+
+
 def test_voxnote_palette_is_applied_to_the_interface() -> None:
     for color in ("#111111", "#2b2b2b", "#d9d9d6", "#f5f5f3", "#3b82f6"):
         assert color in STYLE

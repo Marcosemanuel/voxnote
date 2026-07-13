@@ -202,4 +202,16 @@ Toda mudança de UI deve:
 - O hero exibe a marca, a cena decorativa de gravação, a promessa de processamento local e o botão de download.
 - Em mobile, a largura útil é a viewport menos 32px; recursos e passos passam para uma coluna com cartões de borda `#DEDED9`, raio de 18px e espaçamento de 16px.
 - O botão de download ocupa no máximo 330px e tem 58px de altura em mobile.
-- A cena Three.js é decorativa e deve ser ignorada por tecnologias assistivas.
+- A cena Canvas 2D é decorativa e deve ser ignorada por tecnologias assistivas.
+
+## 12. Captura de reunião
+
+- Entrada explícita `Capturar reunião`; não detectar nem iniciar captura automaticamente.
+- Tela de preparação: consentimento, seleção da saída do Windows, microfone opcional e teste de sinal, sem dividir o início em um assistente desnecessário.
+- Durante a captura: indicador visível, duração, sinal da saída/microfone, último bloco salvo e estado de finalização.
+- Ao encerrar: executar o reconhecimento final antes da revisão; não substituir silenciosamente a versão provisória ou texto revisado.
+- A tela mostra reuniões salvas e permite retomar a revisão e a exportação de uma transcrição concluída após reiniciar o aplicativo. Sessões com blocos preservados exibem `Transcrever` ou `Reprocessar`, inclusive após falha; a ação cria uma nova versão sem substituir a anterior.
+- Se o monitoramento detectar variação superior a 250 ms entre as trilhas, a tela informa que os timestamps devem ser revisados antes da exportação. As trilhas não são combinadas automaticamente.
+- Todos os controles da captura usam o sistema Voxnote: `VxCheckBox`, `VxComboBox`, `VxProgressBar`, `VxTextArea` e `VxButton`; cartões de preparação, andamento, conclusão e reuniões salvas preservam a mesma hierarquia, borda, raio e espaçamento.
+
+O fluxo completo de telas, estados, componentes, copy, responsividade e acessibilidade está especificado em `docs/MEETING_CAPTURE_STACK_FRONTEND.md`. O modo universal será `Capturar e transcrever ao final`; acompanhamento provisório só aparece quando o benchmark local aprovar o hardware.

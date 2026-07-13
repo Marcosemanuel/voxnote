@@ -15,6 +15,59 @@ def _timestamp(seconds: float, separator: str = ",") -> str:
     return f"{hours:02d}:{minutes:02d}:{secs:02d}{separator}{ms:03d}"
 
 
+def export_meeting_transcript(
+    session: sqlite3.Row, run: sqlite3.Row, segments: list[sqlite3.Row], destination: Path, kind: str
+) -> None:
+    """Export a final meeting run without changing captured audio or original recognition."""
+
+    def text(row: sqlite3.Row) -> str:
+        return str(row["revised_text"] or row["original_text"]).strip()
+
+    def seconds(row: sqlite3.Row, column: str) -> float:
+        return int(row[column]) / 1000
+
+    if kind == "txt":
+        text_payload = "\n\n".join(f"[{format_duration(seconds(row, 'start_ms'))}] {text(row)}" for row in segments)
+        destination.write_text(text_payload, encoding="utf-8")
+    elif kind == "srt":
+        blocks = [
+            f"{index}\n{_timestamp(seconds(row, 'start_ms'))} --> {_timestamp(seconds(row, 'end_ms'))}\n{text(row)}"
+            for index, row in enumerate(segments, 1)
+        ]
+        destination.write_text("\n\n".join(blocks) + "\n", encoding="utf-8")
+    elif kind == "vtt":
+        blocks = [
+            f"{_timestamp(seconds(row, 'start_ms'), '.')} --> {_timestamp(seconds(row, 'end_ms'), '.')}\n{text(row)}"
+            for row in segments
+        ]
+        destination.write_text("WEBVTT\n\n" + "\n\n".join(blocks) + "\n", encoding="utf-8")
+    elif kind == "json":
+        payload = {
+            "meeting_session_id": int(session["id"]),
+            "title": session["title"],
+            "duration_ms": session["duration_ms"],
+            "model": run["model_name"],
+            "backend": run["backend"],
+            "language": session["language"],
+            "segments": [
+                {
+                    "track": row["track_kind"],
+                    "start_ms": row["start_ms"],
+                    "end_ms": row["end_ms"],
+                    "original": row["original_text"],
+                    "revised": row["revised_text"],
+                    "reviewed": bool(row["reviewed"]),
+                    "review_required": bool(row["review_required"]),
+                    "metrics": json.loads(row["metrics_json"]),
+                }
+                for row in segments
+            ],
+        }
+        destination.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    else:
+        raise ValueError(f"Invalid export format: {kind}")
+
+
 def export_transcript(job: sqlite3.Row, segments: list[sqlite3.Row], destination: Path, kind: str) -> None:
     def text(row: sqlite3.Row) -> str:
         return str(row["revised_text"] or row["original_text"]).strip()

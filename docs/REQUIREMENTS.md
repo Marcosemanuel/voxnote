@@ -102,6 +102,30 @@
 - `AC-012` TXT, SRT, VTT e JSON são exportados em ordem cronológica e reabertos por ferramentas de referência.
 - `AC-013` Desinstalação não apaga dados do usuário sem escolha explícita.
 - `AC-014` Testes, documentação, instalador e checksum acompanham a release.
+- `AC-015` Uma release superior simulada mostra o aviso e abre sua página; versão igual ou inferior não mostra aviso.
+
+## 3.1 Extensão pós-MVP aprovada: captura local de reuniões
+
+- `FR-060` Iniciar captura de reunião somente após ação explícita e confirmação de autorização do usuário.
+- `FR-061` Listar e permitir selecionar saída de áudio do Windows e microfone opcional.
+- `FR-062` Executar teste de sinal antes da captura e informar ausência de áudio utilizável.
+- `FR-063` Persistir a captura em segmentos no disco, sem carregar a reunião inteira em memória.
+- `FR-064` Encaminhar blocos confirmados à fila sequencial após a captura ou, no modo provisório habilitado, durante a captura, sempre com checkpoints recuperáveis.
+- `FR-065` Indicar que o texto gerado durante a captura é provisório e exibir o acúmulo de fila quando existir.
+- `FR-066` Permitir encerrar a captura preservando blocos e segmentos já confirmados.
+- `FR-067` Permitir reprocessar a captura concluída com perfil de maior precisão antes da revisão.
+
+- `NFR-016` A captura deve manter a interface responsiva, inclusive se a inferência estiver atrasada.
+- `NFR-017` A remoção de dispositivo, falta de espaço ou falha do adaptador deve preservar o áudio já persistido e apresentar próxima ação clara.
+- `NFR-018` A primeira entrega não pode depender de extensão, automação, scraping ou credenciais do Google Meet.
+- `NFR-019` A captura deve manter saída do sistema e microfone separados até a sincronização controlada.
+- `NFR-020` O produto não pode declarar transcrição ao vivo como resultado final de alta precisão.
+
+- `AC-016` Uma captura de 60 minutos conclui sem crescimento contínuo de RAM e sem perda de blocos persistidos.
+- `AC-017` Encerramento forçado durante captura recupera os blocos e segmentos confirmados.
+- `AC-018` Quando a transcrição atrasa, a captura continua e a UI informa a fila pendente.
+- `AC-019` Dispositivo removido e falta de espaço apresentam erro acionável sem apagar o trabalho anterior.
+- `AC-020` O reprocessamento final preserva a versão provisória e qualquer texto revisado existente.
 
 ## 4. Requisitos de hardware comunicados ao usuário
 

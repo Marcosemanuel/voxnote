@@ -115,6 +115,56 @@ Decisões são append-only. Para substituir uma decisão, adicione outra indican
 - Consequências: a UI ganha layouts responsivos e delegates reutilizáveis. A versão QWidget fica disponível temporariamente por `VOXNOTE_LEGACY_UI=1` e será removida após paridade funcional e visual comprovada.
 - Substitui: ADR-002 quanto à tecnologia de apresentação; preserva Python/PySide6 como stack única.
 
+## ADR-016 — Aviso de atualização por GitHub Releases
+
+- Data: 2026-07-13
+- Estado: aceita
+- Contexto: o usuário precisa saber quando uma versão nova do Voxnote estiver publicada, sem criar atualização automática ou interferir no processamento local.
+- Decisão: na abertura, uma thread de segundo plano consulta somente os metadados da última release pública no GitHub. Se a versão for superior à instalada, a interface mostra um aviso e abre a página da release no navegador mediante ação explícita do usuário.
+- Consequências: nenhum áudio, transcrição, credencial ou dado do usuário é enviado; em modo offline ou em falha da consulta o aplicativo permanece utilizável e não mostra erro. O download e a instalação continuam manuais.
+
+## ADR-017 — Captura manual local para reuniões
+
+- Data: 2026-07-13
+- Estado: aceita
+- Contexto: o produto deve atender reuniões no Google Meet sem depender de plano Workspace, extensão de navegador ou envio de áudio a servidores.
+- Decisão: criar, após o MVP, uma capacidade de captura manual do áudio da saída do Windows e do microfone opcional. A captura será local, segmentada em disco, com transcrição provisória em fila e reprocessamento final para precisão. WASAPI loopback é o candidato inicial da prova técnica, atrás de um port de captura isolado.
+- Consequências: a funcionalidade exige confirmação explícita de autorização para gravar, novos estados de sessão, testes de dispositivos e preservação de blocos em interrupções. Não será apresentada como integração oficial com Google Meet nem como transcrição instantânea de alta precisão.
+
+## ADR-018 — Helper nativo isolado para captura WASAPI
+
+- Data: 2026-07-13
+- Estado: proposta, condicionada à prova técnica F9.1
+- Contexto: a captura precisa continuar estável mesmo quando a inferência estiver atrasada e não pode depender da thread de UI, de Python para transportar PCM ou de runtime técnico instalado pelo usuário.
+- Decisão: avaliar um helper C++20 x64, compilado com Windows SDK e CRT estático, usando WASAPI/MMDevice API. O aplicativo o controla por `QProcess` e JSON Lines; o helper grava blocos PCM WAV diretamente no disco e comunica apenas eventos e metadados.
+- Consequências: o pipeline de build passa a compilar um binário nativo e testá-lo no instalador. O helper só será aceito após 60 minutos sem perda de bloco finalizado, sem crescimento contínuo de RAM e com drift inferior a 250 ms entre trilhas.
+
+## ADR-019 — Modo universal final-first e texto provisório opcional
+
+- Data: 2026-07-13
+- Estado: aceita para o planejamento da Fase 9
+- Contexto: texto durante a chamada pode consumir recursos necessários ao navegador e à captura, principalmente em máquinas CPU com 8 GB ou 16 GB de RAM.
+- Decisão: usar `Capturar e transcrever ao final` como modo universal. `Acompanhar texto durante a reunião` é opcional, condicionado a benchmark local e suspenso automaticamente quando a fila provisória ultrapassar 90 segundos.
+- Consequências: preservar áudio tem prioridade sobre latência. O texto provisório e o reconhecimento final são execuções separadas; nenhum deles sobrescreve revisão humana.
+- Substitui: a obrigatoriedade implícita de transcrição provisória durante toda captura descrita na ADR-017; preserva o restante da decisão.
+
+## ADR-020 — Primeira implementação da captura WASAPI em Python empacotável
+
+- Data: 2026-07-13
+- Estado: aceita para a primeira entrega funcional da Fase 9
+- Contexto: o ambiente de desenvolvimento não possui compilador C++/Windows SDK disponível para validar e empacotar o helper proposto na ADR-018. A funcionalidade aprovada precisa continuar utilizável e verificável no aplicativo atual.
+- Decisão: implementar o port de captura isolado com PyAudioWPatch, que expõe os dispositivos WASAPI loopback e de microfone ao processo Python já distribuído pelo Voxnote. Cada trilha grava blocos WAV atômicos, confirma journal com fsync e comunica apenas metadados à interface.
+- Consequências: a aplicação funciona sem extensão do Meet, OAuth ou serviço remoto e mantém as trilhas separadas. O helper C++20 da ADR-018 permanece uma alternativa de endurecimento após o benchmark de 60 minutos; não foi declarado como implementado.
+- Substitui: a exigência de helper C++20 para a primeira entrega da Fase 9; não substitui os critérios de estabilidade da ADR-018.
+
+## ADR-021 — Retentativa imutável e sincronização observável das trilhas
+
+- Data: 2026-07-13
+- Estado: aceita
+- Contexto: uma sessão pode falhar depois de confirmar blocos no journal, e duas fontes de áudio não podem ser misturadas sem controle de tempo.
+- Decisão: recuperar o journal também para sessões `failed`; expor `Transcrever`/`Reprocessar` para qualquer sessão com blocos persistidos; criar uma nova `transcription_run` a cada tentativa. Os blocos recebem tempo relativo ao mesmo QPC e o serviço compara o offset entre trilhas por sequência, alertando em variação maior que 250 ms.
+- Consequências: nenhuma revisão ou reconhecimento anterior é sobrescrito. A primeira entrega preserva e ordena as fontes por timestamp, mas não faz mistura de PCM ou correção destrutiva de fala; o benchmark real continua obrigatório.
+
 ## Modelo para nova decisão
 
 ```text

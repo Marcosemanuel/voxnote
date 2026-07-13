@@ -122,3 +122,17 @@ Saída: página Vercel publicada apontando para o instalador de uma release púb
 - DOCX/PDF.
 - Atualização automática.
 - Projeto portátil.
+
+## Fase 9 — Captura local de reuniões
+
+Estado: primeira entrega funcional local implementada; validação longa e empacotamento pendentes
+
+- `F9.1` Captura WASAPI por PyAudioWPatch validada em smoke test real; teste de 60 minutos e helper C++20 continuam pendentes.
+- `F9.2` Persistência de sessões, trilhas, blocos e journal com recuperação implementada, inclusive para sessões marcadas como falhas.
+- `F9.3` Fluxo universal: capturar e transcrever ao final implementado.
+- `F9.4` Frontend de preparação, captura, finalização, revisão, exportação, recuperação e reprocessamento de blocos preservados implementado.
+- `F9.4a` Timestamps em relógio QPC comum e monitor de drift por trilha implementados; benchmark real de 60 minutos permanece pendente.
+- `F9.5` Texto provisório opcional, condicionado ao benchmark local.
+- `F9.6` PyInstaller `onedir` e instalador Inno Setup `0.2.0` validados localmente com PyAudioWPatch; atalho oficial da área de trabalho criado. A matriz Windows/dispositivos permanece pendente.
+
+Saída: captura recuperável e empacotada, com transcrição final local e integração ao fluxo de revisão/exportação existente.

@@ -104,3 +104,9 @@ Documentação atualizada:
 Pendências/limitações:
 ```
 
+## 11. Captura local de reuniões
+
+- PyAudioWPatch é a implementação inicial do adaptador WASAPI. Antes de mudar de biblioteca ou adotar helper nativo, executar prova técnica de 60 minutos em alto-falante, USB e Bluetooth.
+- A implementação deve ficar atrás de port; não chamar APIs de captura diretamente da UI ou do motor de transcrição.
+- A mudança de schema deve registrar sessões e blocos por migração versionada.
+- Nenhuma dependência nativa entra no instalador sem análise de licença, tamanho, fallback e teste empacotado.

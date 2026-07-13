@@ -30,9 +30,9 @@ ComboBox {
     indicator: Text {
         x: control.width - width - 17
         y: (control.height - height) / 2 - 1
-        text: "⌄"
+        text: "\u2304"
         color: Theme.text
-        font.family: "Manrope"
+        font.family: "Segoe UI Symbol"
         font.pixelSize: 18
         font.weight: Font.Medium
     }
@@ -44,7 +44,7 @@ ComboBox {
         width: ListView.view ? ListView.view.width : control.width
         height: 42
         radius: 7
-        color: control.highlightedIndex === index ? Theme.primarySoft : Theme.surface
+        color: optionMouse.containsMouse || control.currentIndex === index ? Theme.primarySoft : Theme.surface
 
         Text {
             anchors.fill: parent
@@ -60,9 +60,9 @@ ComboBox {
         }
 
         MouseArea {
+            id: optionMouse
             anchors.fill: parent
             hoverEnabled: true
-            onEntered: control.highlightedIndex = option.index
             onClicked: {
                 control.currentIndex = option.index;
                 control.popup.close();

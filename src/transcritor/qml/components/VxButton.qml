@@ -10,8 +10,8 @@ Button {
     property bool iconOnly: false
     property url iconSource: ""
     property rect iconCrop: Qt.rect(0, 0, 0, 0)
-    readonly property color foregroundColor: primary ? "#FFFFFF" : (danger ? Theme.danger : Theme.primaryDark)
-    readonly property color backgroundColor: primary ? (down ? Theme.primaryDark : Theme.primary) : (hovered || down ? Theme.primarySoft : Theme.surface)
+    readonly property color foregroundColor: !enabled ? Theme.muted : (primary ? "#FFFFFF" : (danger ? Theme.danger : Theme.primaryDark))
+    readonly property color backgroundColor: !enabled ? "#E8ECF2" : (primary ? (down ? Theme.primaryDark : Theme.primary) : (hovered || down ? Theme.primarySoft : Theme.surface))
 
     implicitHeight: 46
     implicitWidth: iconOnly ? 46 : Math.max(120, contentRow.implicitWidth + 36)
@@ -46,9 +46,8 @@ Button {
     background: Rectangle {
         radius: Theme.radiusSmall
         color: control.backgroundColor
-        border.width: control.primary ? 0 : 1
-        border.color: control.danger ? "#F0B9B9" : "#A8C7FA"
-        opacity: control.enabled ? 1 : 0.48
+        border.width: control.primary && control.enabled ? 0 : 1
+        border.color: !control.enabled ? Theme.line : (control.danger ? "#F0B9B9" : "#A8C7FA")
 
         Behavior on color {
             ColorAnimation {

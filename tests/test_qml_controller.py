@@ -38,6 +38,14 @@ def test_qml_shell_and_components_are_versioned() -> None:
     assert (qml_root / "Main.qml").is_file()
     assert (qml_root / "Theme.qml").is_file()
     assert (qml_root / "components" / "NavItem.qml").is_file()
+    for component in ("VxCheckBox.qml", "VxProgressBar.qml", "VxTextArea.qml"):
+        assert (qml_root / "components" / component).is_file()
+    combo_box = (qml_root / "components" / "VxComboBox.qml").read_text(encoding="utf-8")
+    assert "highlightedIndex =" not in combo_box
+    main_qml = (qml_root / "Main.qml").read_text(encoding="utf-8")
+    assert "VxCheckBox {\n                                    id: captureConsent" in main_qml
+    assert "VxProgressBar {" in main_qml
+    assert "VxTextArea {\n                                    id: meetingEdit" in main_qml
 
 
 def test_qml_controller_closes_after_cancelled_worker(qtbot, monkeypatch, tmp_path: Path) -> None:

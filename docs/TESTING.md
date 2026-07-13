@@ -39,6 +39,13 @@ Nenhuma funcionalidade está pronta apenas porque foi implementada. Deve existir
 - `pyside6-qmlformat` e `pyside6-qmllint` sobre os arquivos QML.
 - Capturas com `QQuickWindow.grabWindow()` para comparação visual independente do utilitário de captura do Windows.
 
+### Captura local de reuniões
+
+- Exercitar enumeração WASAPI, teste de sinal e captura mínima em saída padrão.
+- Confirmar criação de bloco WAV fechado, journal NDJSON, hash e registro SQLite.
+- Simular revisão humana de `run_segments` e verificar que novo checkpoint preserva `revised_text`.
+- Executar captura de 60 minutos e testar desconexão de dispositivo, falta de espaço e instalação do pacote final antes da release.
+
 ### Sistema/instalador
 
 - Instalação limpa.
@@ -164,3 +171,14 @@ Antes de release:
 - Verificar a primeira dobra em desktop e em 390x844, incluindo bordas, espaçamentos, texto, botão e onda Canvas 2D.
 - Conferir que a landing não solicita permissões de microfone nem acessa conteúdo de áudio.
 - Sem `VITE_DOWNLOAD_URL`, o CTA deve ficar desabilitado; com a variável configurada, ele deve apontar para o instalador publicado.
+
+## 11. Captura local de reuniões
+
+- Testar saída do Windows e microfone separadamente, em alto-falante, USB e Bluetooth.
+- Testar Chrome e Edge reproduzindo chamada sintética, sem usar reuniões reais nas fixtures.
+- Medir perda de blocos, alinhamento entre fontes, RAM, atraso de fila e retomada após encerramento forçado.
+- Testar remoção de dispositivo, falta de espaço, troca de saída e falha do adaptador.
+- Validar que o texto provisório e o reconhecimento final permanecem rastreáveis e não sobrescrevem revisão humana.
+- Teste automatizado: uma sessão marcada como falha com journal confirmado é recuperada como `captured` e volta a oferecer transcrição.
+- Teste automatizado: reprocessamento inicia uma nova execução a partir de blocos persistidos.
+- Teste automatizado: o monitor de sincronização emite alerta acima de 250 ms sem combinar as trilhas.
