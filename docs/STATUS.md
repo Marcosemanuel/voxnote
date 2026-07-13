@@ -98,7 +98,7 @@ CPU comum e GPUs NVIDIA diferentes.
 - Executável empacotado: iniciado e permaneceu ativo no smoke test.
 - Pacote `onedir`: gerado em 2026-07-13 após as correções pós-revisão.
 - Instalador: 182,6 MB.
-- SHA-256: `8D2A7989A91D4EE439696DE5B16E80A8BFB0ED45D45D3EE82D5AEFE628079818`.
+- SHA-256: `6C049E604DFC3DD0809DD53D985999D28EAA4D1652256ED10105603A88B00BA2`.
 - Instalação silenciosa: código 0.
 - Inicialização após instalação: aprovada.
 - Desinstalação silenciosa: código 0 e pasta do programa removida.
