@@ -4,7 +4,7 @@
 
 ## Resumo
 
-A versão funcional `0.1.0` foi implementada e empacotada para Windows x64. O fluxo disponível é
+A versão funcional `0.1.1` foi implementada e empacotada para Windows x64. O fluxo disponível é
 selecionar e validar áudios, configurar idioma/qualidade/glossário, transcrever localmente,
 acompanhar progresso, preservar checkpoints, revisar segmentos e exportar TXT, SRT, VTT ou JSON.
 
@@ -87,7 +87,7 @@ CPU comum e GPUs NVIDIA diferentes.
 - Métricas de precisão.
 - Instalador em VM limpa; o teste local isolado passou.
 
-## Evidências da versão 0.1.0
+## Evidências da versão 0.1.1
 
 - `pytest`: 32 testes aprovados.
 - `ruff check`: aprovado.
@@ -96,7 +96,7 @@ CPU comum e GPUs NVIDIA diferentes.
 - Executável empacotado: iniciado e permaneceu ativo no smoke test.
 - Pacote `onedir`: gerado em 2026-07-13 após as correções pós-revisão.
 - Instalador: 182,6 MB.
-- SHA-256: `351A9F36647F622E0D86C6F2B6C9831462997BE77CA728056CB07DD2B91BC065`.
+- SHA-256: `8D2A7989A91D4EE439696DE5B16E80A8BFB0ED45D45D3EE82D5AEFE628079818`.
 - Instalação silenciosa: código 0.
 - Inicialização após instalação: aprovada.
 - Desinstalação silenciosa: código 0 e pasta do programa removida.
